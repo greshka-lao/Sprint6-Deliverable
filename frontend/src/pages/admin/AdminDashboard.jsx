@@ -20,10 +20,6 @@ function AdminDashboard() {
             <h3>Welcome, {user?.username || 'Administrator'}</h3>
             <p>You are signed in with the {user?.role || 'admin'} role.</p>
           </div>
-          <div className="dashboard-actions">
-            <Link to="/customer"><button>Manage Customers</button></Link>
-            <Link to="/account"><button>Manage Accounts</button></Link>
-          </div>
         </div>
       </div>
     </div>

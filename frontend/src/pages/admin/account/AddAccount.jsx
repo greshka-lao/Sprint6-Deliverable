@@ -1,9 +1,9 @@
-import '../../App.css'
+import '../../../App.css'
 import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import Sidebar from '../../components/Sidebar'
-import Header from '../../components/Header'
+import Sidebar from '../../../components/Sidebar'
+import Header from '../../../components/Header'
 
 function AddAccount() {
   const apiUrl = 'http://localhost:8080/sprint4Deliverable'
@@ -22,7 +22,7 @@ function AddAccount() {
           const customersData = response.data
           if (customersData.length == 0) {
             alert("There are no customers.")
-            navigate("/account")
+            navigate("/admin/accounts")
           }
           setCustomers(customersData)
         })
@@ -38,7 +38,7 @@ function AddAccount() {
 
       await axios.put(apiUrl + `/account/setCustomer?accountId=${response.data.accountId}&customerId=${accountData.customerId}`);
 
-      navigate('/account')
+      navigate('/admin/accounts')
     } catch (error) {
       console.error('Error adding account:', error)
       setMessage('Error adding account. Please try again.')
@@ -127,7 +127,7 @@ function AddAccount() {
 
             <div id="formActions">
               <button type="submit" id="submit">Add</button>
-              <Link to="/account">
+              <Link to="/admin/accounts">
                 <button type="button">Cancel</button>
               </Link>
             </div>

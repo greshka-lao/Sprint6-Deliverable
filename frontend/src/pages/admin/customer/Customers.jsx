@@ -1,9 +1,9 @@
-import '../../App.css'
+import '../../../App.css'
 import axios from 'axios'
 import { useState, useEffect } from 'react'
-import Sidebar from '../../components/Sidebar'
-import Header from '../../components/Header'
-import CustomerAccountsPopUp from '../../components/CustomerAccountsPopUp'
+import Sidebar from '../../../components/Sidebar'
+import Header from '../../../components/Header'
+import CustomerAccountsPopUp from '../../../components/CustomerAccountsPopUp'
 import { Link } from 'react-router-dom'
 
 function Customers() {
@@ -56,7 +56,7 @@ function Customers() {
         <div id="content">
           <div id="header">
             <h2>Customers</h2>
-            <Link to="/customer/add">
+            <Link to="/admin/customers/add">
               <button id="add">Add</button>
             </Link>
           </div>
@@ -110,7 +110,7 @@ function Customers() {
                   </td>
                   <td>
                     <div className="actions">
-                      <Link to={`/customer/edit/${customer.customerId}`}>
+                      <Link to={`/admin/customers/edit/${customer.customerId}`}>
                         <button>Update</button>
                       </Link>
                       <button onClick={()=>deleteCustomer(customer.customerId)}>Delete</button>

@@ -12,7 +12,7 @@ function AccountPopUp({ accountId, selectAccountId }) {
     if (confirm("Are you sure you want to delete this account?")) {
       axios.delete(apiUrl + '/account/delete?accountId=' + id)
         .then(() => {
-          navigate("/account");
+          navigate("/admin/accounts");
           selectAccountId(null);
         })
         .catch((error) => console.log(error))
@@ -68,7 +68,7 @@ function AccountPopUp({ accountId, selectAccountId }) {
         </div>
 
         <div className="actions">
-          <Link to={`/account/edit/${account?.accountId}`}>
+          <Link to={`/admin/accounts/edit/${account?.accountId}`}>
             <button>Update</button>
           </Link>
           <button onClick={()=>{deleteAccount(account?.accountId)}}>Delete</button>

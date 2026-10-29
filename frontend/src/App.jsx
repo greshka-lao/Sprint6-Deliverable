@@ -1,30 +1,54 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
-import Customers from './pages/customer/Customers'
-import Accounts from './pages/account/Accounts'
-import AddCustomer from './pages/customer/AddCustomer'
-import AddAccount from './pages/account/AddAccount'
-import UpdateCustomer from './pages/customer/UpdateCustomer'
-import UpdateAccount from './pages/account/UpdateAccount'
-import Login from './pages/auth/Login'
+import { Link, Navigate, Route, Routes } from 'react-router-dom'
+import Customers from './pages/admin/customer/Customers'
+import Accounts from './pages/admin/account/Accounts'
+import AddCustomer from './pages/admin/customer/AddCustomer'
+import AddAccount from './pages/admin/account/AddAccount'
+import UpdateCustomer from './pages/admin/customer/UpdateCustomer'
+import UpdateAccount from './pages/admin/account/UpdateAccount'
+import AdminLogin from './pages/auth/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
-import ProtectedRoute from './components/ProtectedRoute'
+import AdminProtectedRoute from './components/AdminProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
+import CustomerLogin from './pages/auth/CustomerLogin'
+import CustomerRegistration from './pages/auth/CustomerRegistration'
+import CustomerHome from './pages/customer/CustomerHome'
+import CustomerProtectedRoute from './components/CustomerProtectedRoute'
+import { CustomerAuthProvider } from './context/CustomerAuthProvider'
 import './App.css'
+
+function PublicHome() {
+  return (
+    <main className="customer-public-home">
+      <h1>Hooper Bank</h1>
+      <p>{new Date().getHours() < 12 ? 'Good morning!' : new Date().getHours() < 18 ? 'Good afternoon!' : 'Good evening!'} How would you like to proceed?</p>
+      <nav aria-label="Account options">
+        <Link to="/customer/login">Customer</Link>
+        <Link to="/admin/login">Admin</Link>
+      </nav>
+    </main>
+  )
+}
 
 function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-        <Route path="/" element={<Navigate to="/customer" replace />} />
-        <Route path="/customer" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
-        <Route path="/customer/add" element={<ProtectedRoute><AddCustomer /></ProtectedRoute>} />
-        <Route path="/account/add" element={<ProtectedRoute><AddAccount /></ProtectedRoute>} />
-        <Route path="/account" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
-        <Route path="/customer/edit/:customerId" element={<ProtectedRoute><UpdateCustomer /></ProtectedRoute>} />
-        <Route path="/account/edit/:accountId" element={<ProtectedRoute><UpdateAccount /></ProtectedRoute>} />
-      </Routes>
+      <CustomerAuthProvider>
+        <Routes>
+          <Route path="/" element={<PublicHome />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+          <Route path="/admin/customers" element={<AdminProtectedRoute><Customers /></AdminProtectedRoute>} />
+          <Route path="/admin/customers/add" element={<AdminProtectedRoute><AddCustomer /></AdminProtectedRoute>} />
+          <Route path="/admin/customers/edit/:customerId" element={<AdminProtectedRoute><UpdateCustomer /></AdminProtectedRoute>} />
+          <Route path="/admin/accounts" element={<AdminProtectedRoute><Accounts /></AdminProtectedRoute>} />
+          <Route path="/admin/accounts/add" element={<AdminProtectedRoute><AddAccount /></AdminProtectedRoute>} />
+          <Route path="/admin/accounts/edit/:accountId" element={<AdminProtectedRoute><UpdateAccount /></AdminProtectedRoute>} />
+          <Route path="/customer/login" element={<CustomerLogin />} />
+          <Route path="/customer/register" element={<CustomerRegistration />} />
+          <Route path="/customer/home" element={<CustomerProtectedRoute><CustomerHome /></CustomerProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </CustomerAuthProvider>
     </AuthProvider>
   )
 }

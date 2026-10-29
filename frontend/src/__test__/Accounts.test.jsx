@@ -57,19 +57,18 @@ describe('Accounts', () => {
   /* ===== TESTS =====*/
 
   it('renders accounts and customer names', async () => {
-    axios.get
-      .mockResolvedValueOnce({
-        data: accounts,
-      })
-      .mockResolvedValueOnce({
-        data: customers[0],
-      })
-      .mockResolvedValueOnce({
-        data: customers[1],
-      })
-      .mockResolvedValueOnce({
-        data: customers,
-      });
+    axios.get.mockImplementation((url) => {
+      if (url.endsWith('/account/getAll')) {
+        return Promise.resolve({ data: accounts })
+      }
+      if (url.endsWith('/customer/get?customerId=1')) {
+        return Promise.resolve({ data: customers[0] })
+      }
+      if (url.endsWith('/customer/get?customerId=2')) {
+        return Promise.resolve({ data: customers[1] })
+      }
+      return Promise.resolve({ data: [] })
+    })
 
     render(
       <MemoryRouter>

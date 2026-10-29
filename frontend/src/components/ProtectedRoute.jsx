@@ -8,8 +8,11 @@ function ProtectedRoute({ children }) {
     return <div className="loading-state">Checking your session...</div>
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />
+  const role = user?.role?.toUpperCase()
+  const hasAdminRole = ['BANK_TELLER', 'BANK_MANAGER', 'ADMIN'].includes(role)
+
+  if (!user || !hasAdminRole) {
+    return <Navigate to="/admin/login" replace />
   }
 
   return children

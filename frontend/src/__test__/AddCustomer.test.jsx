@@ -106,7 +106,7 @@ describe('AddCustomer', () => {
       );
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith('/customer');
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/customers');
   });
 
   it('creates a company customer', async () => {

@@ -1,9 +1,9 @@
-import "../../App.css";
+import "../../../App.css";
 import axios from "axios";
 import { useState, useEffect } from "react";
-import Sidebar from "../../components/Sidebar";
-import Header from "../../components/Header";
-import AccountPopUp from "../../components/AccountPopUp"
+import Sidebar from "../../../components/Sidebar";
+import Header from "../../../components/Header";
+import AccountPopUp from "../../../components/AccountPopUp"
 import { Link } from "react-router-dom";
 
 function Accounts() {
@@ -75,7 +75,7 @@ function Accounts() {
           <div id="header">
             <h2>Accounts</h2>
 
-            <Link to="/account/add">
+            <Link to="/admin/accounts/add">
               <button id="add">Add</button>
             </Link>
             
@@ -163,7 +163,7 @@ function Accounts() {
                     {account.accountType == 'savingsAccount' ? 'Savings' : 'Checking'}
                   </td>
                   <td className="actions">
-                    <Link to={`/account/edit/${account.accountId}`}>
+                    <Link to={`/admin/accounts/edit/${account.accountId}`}>
                       <button>Update</button>
                     </Link>
                     <button onClick={()=>{deleteAccount(account.accountId)}}>Delete</button>

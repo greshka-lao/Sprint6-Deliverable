@@ -130,7 +130,7 @@ describe("CustomerAccountPopUp", () => {
       );
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith("/account");
+    expect(mockNavigate).toHaveBeenCalledWith("/admin/accounts");
   });
 
   it("does not delete account when cancelled", async () => {
@@ -172,4 +172,3 @@ describe("CustomerAccountPopUp", () => {
     expect(selectCustomerProp).toHaveBeenCalledWith(null);
   })
 });
-

@@ -1,9 +1,9 @@
-import '../../App.css'
+import '../../../App.css'
 import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import Sidebar from '../../components/Sidebar'
-import Header from '../../components/Header'
+import Sidebar from '../../../components/Sidebar'
+import Header from '../../../components/Header'
 
 function UpdateAccount() {
   const { accountId } = useParams();
@@ -41,7 +41,7 @@ function UpdateAccount() {
       // Assign customer to account
       await axios.put(apiUrl + `/account/setCustomer?accountId=${response.data.accountId}&customerId=${accountData.customerId}`);
       
-      navigate('/account')
+      navigate('/admin/accounts')
     } catch (error) {
       setMessage('Error updating account. Please try again.')
       console.error('Error updating account:', error)
@@ -177,7 +177,7 @@ function UpdateAccount() {
 
             <div id="formActions">
               <button type="submit" id="submit">Update</button>
-              <Link to="/account">
+              <Link to="/admin/accounts">
                 <button type="button">Cancel</button>
               </Link>
             </div>

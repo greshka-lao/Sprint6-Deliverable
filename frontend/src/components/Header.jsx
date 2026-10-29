@@ -1,17 +1,14 @@
 import { useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useCustomerAuth } from '../context/useCustomerAuth'
 import '../App.css'
 
-function Header() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-
+function useHeaderMenu() {
   useEffect(() => {
     const handleOutsideClick = (event) => {
       const sidebar = document.querySelector('.sidebar')
-      const menuIcon = document.querySelector('img[alt="Menu"]')
+      const menuIcon = document.querySelector('.header-menu-toggle')
 
       if (!sidebar || !menuIcon) return
 
@@ -28,54 +25,80 @@ function Header() {
     }
 
     document.addEventListener('click', handleOutsideClick)
-
-    return () => {
-      document.removeEventListener('click', handleOutsideClick)
-    }
+    return () => document.removeEventListener('click', handleOutsideClick)
   }, [])
+
+  return () => {
+    const sidebar = document.querySelector('.sidebar')
+    if (!sidebar) return
+
+    const isOpen = sidebar.dataset.open === 'true'
+    sidebar.dataset.open = String(!isOpen)
+    sidebar.style.display = 'grid'
+    sidebar.style.position = 'fixed'
+    sidebar.style.top = '0'
+    sidebar.style.left = '0'
+    sidebar.style.height = '100vh'
+    sidebar.style.transition = 'transform 0.3s ease-in-out'
+    sidebar.style.transform = isOpen ? 'translateX(-100%)' : 'translateX(0)'
+  }
+}
+
+function HeaderBar({ username, onLogout, menuLabel = 'Menu', logoutLabel = 'Logout' }) {
+  const toggleSidebar = useHeaderMenu()
+
+  return (
+    <header>
+      <img className="header-menu-toggle" src="menu-icon.svg" alt={menuLabel} width="24" height="24" onClick={toggleSidebar} />
+      <h1>Hooper Bank</h1>
+      <div className="header-actions">
+        <span className="header-user">{username}</span>
+        <button type="button" onClick={onLogout}>{logoutLabel}</button>
+      </div>
+    </header>
+  )
+}
+
+function AdminHeader() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
 
   const handleLogout = async () => {
     await logout()
-    if (location.pathname !== '/login') {
-      navigate('/login')
+    if (location.pathname !== '/admin/login') {
+      navigate('/admin/login')
     }
   }
 
   return (
-    <header>
-      <img 
-        src="menu-icon.svg" 
-        alt="Menu" 
-        width="24" 
-        height="24" 
-        onClick={() => {
-          const sidebar = document.querySelector('.sidebar')
-          if (sidebar) {
-            const isOpen = sidebar.dataset.open === 'true'
-
-            sidebar.dataset.open = String(!isOpen)
-            sidebar.style.display = 'grid'
-            sidebar.style.position = 'fixed'
-            sidebar.style.top = '0'
-            sidebar.style.left = '0'
-            sidebar.style.height = '100vh'
-            sidebar.style.transition = 'transform 0.3s ease-in-out'
-            sidebar.style.transform = isOpen ? 'translateX(-100%)' : 'translateX(0)'
-          }
-        }}
-      />
-      <h1>Hooper Bank</h1>
-
-      {user ? (
-        <div className="header-actions">
-          <span className="header-user">{user.username}</span>
-          <button type="button" onClick={handleLogout}>Logout</button>
-        </div>
-      ) : (
-        <Link to="/login" className="header-login-link">Login</Link>
-      )}
-    </header> 
+    user
+      ? <HeaderBar username={user.username} onLogout={handleLogout} />
+      : <header><h1>Hooper Bank</h1><Link to="/" className="header-login-link"> Login</Link></header>
   )
+}
+
+function CustomerHeader() {
+  const { customer, logout } = useCustomerAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/customer/login')
+  }
+
+  return (
+    <HeaderBar
+      username={customer?.username || 'Customer'}
+      onLogout={handleLogout}
+      menuLabel="Customer menu"
+      logoutLabel="Sign out"
+    />
+  )
+}
+
+function Header({ variant = 'admin' }) {
+  return variant === 'customer' ? <CustomerHeader /> : <AdminHeader />
 }
 
 export default Header

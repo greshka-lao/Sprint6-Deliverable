@@ -1,9 +1,9 @@
-import '../../App.css'
+import '../../../App.css'
 import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import Sidebar from '../../components/Sidebar'
-import Header from '../../components/Header'
+import Sidebar from '../../../components/Sidebar'
+import Header from '../../../components/Header'
 
 function AddCustomer() {
   const apiUrl = 'http://localhost:8080/sprint4Deliverable'
@@ -13,7 +13,7 @@ function AddCustomer() {
   const sendCustomerData = async (customerData) => {
     try {
       await axios.post(apiUrl + '/customer/save', customerData)
-      navigate('/customer')
+      navigate('/admin/customers')
     } catch (error) {
       if (error.response?.status == 400 && error.response?.data == "Postal code not found") {
         setMessage('Invalid postal code. Please enter a valid postal code.')
@@ -85,7 +85,7 @@ function AddCustomer() {
 
               <div id="formActions">
                 <button type="submit" id="submit">Add</button>
-                <Link to="/customer">
+                <Link to="/admin/customers">
                   <button type="button">Cancel</button>
                 </Link>
               </div>

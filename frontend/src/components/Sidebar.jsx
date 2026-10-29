@@ -1,23 +1,38 @@
 import '../App.css'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useCustomerAuth } from '../context/useCustomerAuth'
 
-function Sidebar() {
+function AdminSidebar() {
   const { user } = useAuth()
 
   return (
-    <nav className="sidebar">
+    <nav className="sidebar" aria-label="Admin navigation">
       {user ? (
         <>
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/customer">Customers</Link>
-          <Link to="/account">Accounts</Link>
+          <Link to="/admin/dashboard">Dashboard</Link>
+          <Link to="/admin/customers">Customers</Link>
+          <Link to="/admin/accounts">Accounts</Link>
         </>
       ) : (
-        <Link to="/login">Admin Login</Link>
+        <Link to="/admin/login">Admin Login</Link>
       )}
     </nav>
   )
+}
+
+function CustomerSidebar() {
+  const { customer } = useCustomerAuth()
+
+  return (
+    <nav className="sidebar customer-sidebar" aria-label="Customer navigation">
+      {customer && <Link to="/customer/home">Dashboard</Link>}
+    </nav>
+  )
+}
+
+function Sidebar({ variant = 'admin' }) {
+  return variant === 'customer' ? <CustomerSidebar /> : <AdminSidebar />
 }
 
 export default Sidebar

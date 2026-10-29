@@ -4,7 +4,7 @@ import Header from '../../components/Header'
 import { useAuth } from '../../context/AuthContext'
 import '../../App.css'
 
-function Login() {
+function AdminLogin() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
   const [formData, setFormData] = useState({ username: '', password: '' })
@@ -12,7 +12,7 @@ function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   if (user) {
-    return <Navigate to="/customer" replace />
+    return <Navigate to="/admin/dashboard" replace />
   }
 
   const handleChange = (event) => {
@@ -33,7 +33,7 @@ function Login() {
 
     try {
       await login(formData.username, formData.password)
-      navigate('/customer')
+      navigate('/admin/dashboard')
     } catch (loginError) {
       setError(loginError.message || 'Invalid username or password.')
     } finally {
@@ -99,4 +99,4 @@ function Login() {
   )
 }
 
-export default Login
+export default AdminLogin

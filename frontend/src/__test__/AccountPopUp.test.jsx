@@ -142,7 +142,7 @@ describe('AccountPopUp', () => {
 
       const link = updateButton.closest('a');
 
-      expect(link).toHaveAttribute('href', '/account/edit/' + accounts[0].accountId);
+      expect(link).toHaveAttribute('href', '/admin/accounts/edit/' + accounts[0].accountId);
     });
   });
 
@@ -179,7 +179,7 @@ describe('AccountPopUp', () => {
         'http://localhost:8080/sprint4Deliverable/account/delete?accountId=' + accounts[0].accountId
       );
 
-      expect(mockNavigate).toHaveBeenCalledWith('/account');
+      expect(mockNavigate).toHaveBeenCalledWith('/admin/accounts');
       expect(mockSelectAccountId).toHaveBeenCalledWith(null);
     });
   });

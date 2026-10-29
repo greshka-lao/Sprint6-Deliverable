@@ -175,7 +175,7 @@ describe('UpdateAccount', () => {
     );
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/account');
+      expect(mockNavigate).toHaveBeenCalledWith('/admin/accounts');
     });
   });
 
@@ -234,7 +234,7 @@ describe('UpdateAccount', () => {
     );
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/account');
+      expect(mockNavigate).toHaveBeenCalledWith('/admin/accounts');
     });
   });
 });

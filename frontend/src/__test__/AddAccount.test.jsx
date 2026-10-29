@@ -137,7 +137,7 @@ describe('AddAccount', () => {
         accounts[0]
       );
 
-      expect(mockNavigate).toHaveBeenCalledWith('/account');
+      expect(mockNavigate).toHaveBeenCalledWith('/admin/accounts');
     });
   });
 
@@ -212,7 +212,7 @@ describe('AddAccount', () => {
 
     await waitFor(() => {
       expect(window.alert).toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith('/account');
+      expect(mockNavigate).toHaveBeenCalledWith('/admin/accounts');
     });
   });
 });

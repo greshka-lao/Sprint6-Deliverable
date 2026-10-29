@@ -1,9 +1,9 @@
-import '../../App.css'
+import '../../../App.css'
 import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import Sidebar from '../../components/Sidebar'
-import Header from '../../components/Header'
+import Sidebar from '../../../components/Sidebar'
+import Header from '../../../components/Header'
 
 function UpdateCustomer() {
   const { customerId } = useParams();
@@ -31,7 +31,7 @@ function UpdateCustomer() {
 
       // Edit current customer
       await axios.put(apiUrl + '/customer/edit', customerData)
-      navigate('/customer')
+      navigate('/admin/customers')
 
     } catch (error) {
 
@@ -192,7 +192,7 @@ function UpdateCustomer() {
 
               <div id="formActions">
                 <button type="submit" id="submit">Update</button>
-                <Link to="/customer">
+                <Link to="/admin/customers">
                   <button type="button">Cancel</button>
                 </Link>
               </div>

@@ -167,7 +167,7 @@ describe('UpdateCustomer', () => {
       )
     })
 
-    expect(mockNavigate).toHaveBeenCalledWith('/customer')
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/customers')
   })
 
   it('has cancel link to customer page', async () => {
@@ -177,7 +177,7 @@ describe('UpdateCustomer', () => {
 
     const cancelLink = screen.getByRole('link')
 
-    expect(cancelLink).toHaveAttribute('href', '/customer')
+    expect(cancelLink).toHaveAttribute('href', '/admin/customers')
   })
 
   it('renders readonly customer fields', async () => {

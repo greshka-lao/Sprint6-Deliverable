@@ -21,7 +21,7 @@ function CustomerAccountsPopUp({ customer, selectCustomer }) {
   const deleteAccount = (id) => {
     if (confirm("Are you sure you want to delete this account?")) {
       axios.delete(apiUrl + '/account/delete?accountId=' + id)
-        .then(() => navigate('/account'))
+        .then(() => navigate('/admin/accounts'))
         .catch((error) => console.log(error))
     }
   };
@@ -56,7 +56,7 @@ function CustomerAccountsPopUp({ customer, selectCustomer }) {
                 })}</td>
                 <td>{account.accountType == 'savingsAccount' ? 'Savings' : 'Checking'}</td>
                 <td className="actions">
-                  <Link to={`/account/edit/${account.accountId}`}>
+                  <Link to={`/admin/accounts/edit/${account.accountId}`}>
                     <button>Update</button>
                   </Link>
                   <button onClick={()=>{deleteAccount(account.accountId)}}>Delete</button>
