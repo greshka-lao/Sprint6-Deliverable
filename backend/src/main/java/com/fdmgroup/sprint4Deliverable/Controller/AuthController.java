@@ -25,7 +25,9 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
-        AuthResponse response = authService.login(request.getUsername(), request.getPassword());
+        AuthResponse response = authService.login(
+                request == null ? null : request.getUsername(),
+                request == null ? null : request.getPassword());
         return ResponseEntity.ok(response);
     }
 
@@ -40,7 +42,8 @@ public class AuthController {
     public ResponseEntity<AuthResponse> session(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         String token = extractToken(authorizationHeader);
         AdminUser adminUser = authService.validateSession(token);
-        return ResponseEntity.ok(new AuthResponse(token, adminUser.getUsername(), adminUser.getRole().getName(), "Session valid"));
+        return ResponseEntity.ok(new AuthResponse(null, adminUser.getUsername(),
+                adminUser.getRole().getName(), "Session valid"));
     }
 
     private String extractToken(String authorizationHeader) {

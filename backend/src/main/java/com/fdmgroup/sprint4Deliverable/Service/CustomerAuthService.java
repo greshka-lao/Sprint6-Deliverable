@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -44,7 +45,9 @@ public class CustomerAuthService {
 
 	public CustomerAuthService(CustomerAccountRepository repository,
 			CustomerUsernameService usernameService,
+			@Qualifier("customerPasswordEncoder")
 			PasswordEncoder customerPasswordEncoder,
+			@Qualifier("customerAuthenticationManager")
 			AuthenticationManager authenticationManager) {
 		this.repository = repository;
 		this.usernameService = usernameService;

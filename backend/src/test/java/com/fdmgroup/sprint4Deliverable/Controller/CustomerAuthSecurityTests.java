@@ -121,8 +121,8 @@ class CustomerAuthSecurityTests {
 				.andExpect(jsonPath("$.customer.username").value(username));
 
 		mockMvc.perform(get("/customer/getAll").session(session))
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.error").value("validation_error"));
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.error").value("authentication_required"));
 
 		MvcResult logoutCsrf = mockMvc.perform(get("/api/customer-auth/csrf").session(session))
 				.andExpect(status().isOk())

@@ -6,14 +6,15 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -71,9 +72,10 @@ public class CustomerSecurityConfig {
 		return provider;
 	}
 
-	@Bean
-	AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
-		return configuration.getAuthenticationManager();
+	@Bean(name = "customerAuthenticationManager")
+	@Primary
+	AuthenticationManager customerAuthenticationManager(DaoAuthenticationProvider customerAuthenticationProvider) {
+		return new ProviderManager(customerAuthenticationProvider);
 	}
 
 	@Bean
@@ -134,7 +136,7 @@ public class CustomerSecurityConfig {
 	}
 
 	@Bean
-	@Order(2)
+	@Order(3)
 	SecurityFilterChain compatibilitySecurityFilterChain(HttpSecurity http) throws Exception {
 		http.authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
 				.csrf(csrf -> csrf.disable())

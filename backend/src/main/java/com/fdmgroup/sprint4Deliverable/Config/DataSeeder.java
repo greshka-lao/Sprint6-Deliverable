@@ -2,6 +2,7 @@ package com.fdmgroup.sprint4Deliverable.Config;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import com.fdmgroup.sprint4Deliverable.Model.AdminUser;
@@ -10,6 +11,7 @@ import com.fdmgroup.sprint4Deliverable.Repository.AdminUserRepository;
 import com.fdmgroup.sprint4Deliverable.Repository.RoleRepository;
 
 @Component
+@Profile("development")
 public class DataSeeder implements ApplicationRunner {
 
     private final RoleRepository roleRepository;

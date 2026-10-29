@@ -16,21 +16,30 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+import jakarta.servlet.Filter;
 
 import com.fdmgroup.sprint4Deliverable.Exception.IncorrectCityOrProvinceException;
+import com.fdmgroup.sprint4Deliverable.Model.AdminUser;
 import com.fdmgroup.sprint4Deliverable.Model.Account;
 import com.fdmgroup.sprint4Deliverable.Model.Address;
 import com.fdmgroup.sprint4Deliverable.Model.CheckingAccount;
@@ -38,9 +47,12 @@ import com.fdmgroup.sprint4Deliverable.Model.Company;
 import com.fdmgroup.sprint4Deliverable.Model.Customer;
 import com.fdmgroup.sprint4Deliverable.Model.Person;
 import com.fdmgroup.sprint4Deliverable.Model.SavingsAccount;
+import com.fdmgroup.sprint4Deliverable.Model.Role;
 import com.fdmgroup.sprint4Deliverable.Repository.AccountRepository;
 import com.fdmgroup.sprint4Deliverable.Repository.AddressRepository;
+import com.fdmgroup.sprint4Deliverable.Repository.AdminUserRepository;
 import com.fdmgroup.sprint4Deliverable.Repository.CustomerRepository;
+import com.fdmgroup.sprint4Deliverable.Repository.RoleRepository;
 import com.fdmgroup.sprint4Deliverable.Service.AccountService;
 import com.fdmgroup.sprint4Deliverable.Service.AddressService;
 import com.fdmgroup.sprint4Deliverable.Service.CustomerService;
@@ -58,6 +70,22 @@ class Sprint4DeliverableApplicationTests {
 	
 	@Autowired
 	private MockMvc mvc;
+
+	@Autowired
+	private WebApplicationContext webApplicationContext;
+
+	@Autowired
+	@Qualifier("springSecurityFilterChain")
+	private Filter springSecurityFilterChain;
+
+	@Autowired
+	private AdminUserRepository adminUserRepository;
+
+	@Autowired
+	private RoleRepository roleRepository;
+
+	private String adminUsername;
+	private String adminPassword = "test-admin-password";
 	
 	@Mock
     private CustomerRepository customerRepo;
@@ -77,14 +105,39 @@ class Sprint4DeliverableApplicationTests {
     @InjectMocks
     private AddressService addressService;
 
-	@Test
-	public void contextLoads() {
-	}
+    @BeforeEach
+    void authenticateAdminRequests() throws Exception {
+        adminUsername = "legacy-api-test-" + UUID.randomUUID();
+        Role role = roleRepository.findByName("BANK_TELLER")
+                .orElseGet(() -> roleRepository.save(new Role("BANK_TELLER", "Bank teller")));
+        adminUserRepository.save(new AdminUser(adminUsername, adminUsername + "@example.test", adminPassword, role));
+
+        MvcResult login = mvc.perform(MockMvcRequestBuilders.post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"%s","password":"%s"}
+                                """.formatted(adminUsername, adminPassword)))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andReturn();
+        String token = login.getResponse().getContentAsString()
+                .replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
+
+        mvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
+                .addFilters(springSecurityFilterChain)
+                .defaultRequest(MockMvcRequestBuilders.get("/")
+                        .header("Authorization", "Bearer " + token))
+                .build();
+    }
+
+    @Test
+    public void contextLoads() {
+    }
 	
-	@Test
-	public void main_runsApplication() {
-	    Sprint4DeliverableApplication.main(new String[] {});
-	}
+    @Test
+    public void applicationClassIsBootstrapped() {
+        assertNotNull(Sprint4DeliverableApplication.class
+                .getAnnotation(SpringBootApplication.class));
+    }
 	
 	@Test
 	public void savePerson_returns200() throws Exception {

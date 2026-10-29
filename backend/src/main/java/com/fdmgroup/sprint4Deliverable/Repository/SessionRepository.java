@@ -9,7 +9,7 @@ import com.fdmgroup.sprint4Deliverable.Model.Session;
 
 public interface SessionRepository extends JpaRepository<Session, Long> {
 
-    Optional<Session> findByToken(String token);
+    Optional<Session> findByTokenDigest(String tokenDigest);
 
     Optional<Session> findByAdminUserAndActiveTrue(AdminUser adminUser);
 }

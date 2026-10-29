@@ -21,8 +21,8 @@ public class Session {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String token;
+    @Column(name = "token", nullable = false, unique = true)
+    private String tokenDigest;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "admin_user_id", nullable = false)
@@ -65,12 +65,12 @@ public class Session {
         this.id = id;
     }
 
-    public String getToken() {
-        return token;
+    public String getTokenDigest() {
+        return tokenDigest;
     }
 
-    public void setToken(String token) {
-        this.token = token;
+    public void setTokenDigest(String tokenDigest) {
+        this.tokenDigest = tokenDigest;
     }
 
     public AdminUser getAdminUser() {
