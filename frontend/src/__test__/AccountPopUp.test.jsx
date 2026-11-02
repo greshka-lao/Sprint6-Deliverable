@@ -9,6 +9,9 @@ import AccountPopUp from '../components/AccountPopUp';
 const mockNavigate = vi.fn();
 
 vi.mock('axios');
+vi.stubGlobal('localStorage', {
+  getItem: vi.fn(() => 'admin-test-token'),
+});
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -176,7 +179,8 @@ describe('AccountPopUp', () => {
 
     await waitFor(() => {
       expect(axios.delete).toHaveBeenCalledWith(
-        'http://localhost:8080/sprint4Deliverable/account/delete?accountId=' + accounts[0].accountId
+        'http://localhost:8080/sprint4Deliverable/account/delete?accountId=' + accounts[0].accountId,
+        { headers: { Authorization: 'Bearer admin-test-token' } }
       );
 
       expect(mockNavigate).toHaveBeenCalledWith('/admin/accounts');

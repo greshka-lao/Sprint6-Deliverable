@@ -1,0 +1,131 @@
+openapi: 3.1.0
+info:
+  title: Customer Dashboard API
+  version: 1.0.0
+  description: Read-only overview for the customer authenticated by the existing customer session.
+paths:
+  /api/customer-auth/dashboard:
+    get:
+      operationId: getCustomerDashboard
+      summary: Get the authenticated customer's dashboard
+      description: >
+        Returns only the profile and accounts belonging to the authenticated customer.
+        The server determines the customer from the session; this operation accepts no
+        customer identifier.
+      security:
+        - customerSession: []
+      responses:
+        "200":
+          description: The authenticated customer's profile, accounts, and account total.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerDashboard"
+              example:
+                profile:
+                  name: Alex Example
+                  email: alex@example.com
+                  phoneNumber: "+64211234567"
+                  address:
+                    streetNumber: 12 Example Street
+                    city: Auckland
+                    province: Auckland
+                    postalCode: "1010"
+                accounts:
+                  - accountId: 101
+                    accountType: savingsAccount
+                    balance: 1250.5
+                    currency: NZD
+                  - accountId: 102
+                    accountType: checkingAccount
+                    balance: 300
+                    currency: NZD
+                total:
+                  amount: 1550.5
+                  currency: NZD
+        "401":
+          description: No valid customer session is present.
+        "403":
+          description: The session is not authorized as a customer.
+        "5XX":
+          description: Dashboard data could not be retrieved; the client must not present stale data as current.
+components:
+  securitySchemes:
+    customerSession:
+      type: apiKey
+      in: cookie
+      name: JSESSIONID
+      description: Existing authenticated customer session cookie.
+  schemas:
+    CustomerDashboard:
+      type: object
+      required:
+        - profile
+        - accounts
+        - total
+      properties:
+        profile:
+          $ref: "#/components/schemas/CustomerProfile"
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerAccount"
+        total:
+          $ref: "#/components/schemas/AccountTotal"
+    CustomerProfile:
+      type: object
+      properties:
+        name:
+          type: [string, "null"]
+        email:
+          type: [string, "null"]
+          format: email
+        phoneNumber:
+          type: [string, "null"]
+        address:
+          oneOf:
+            - $ref: "#/components/schemas/PostalAddress"
+            - type: "null"
+    PostalAddress:
+      type: object
+      properties:
+        streetNumber:
+          type: [string, "null"]
+        city:
+          type: [string, "null"]
+        province:
+          type: [string, "null"]
+        postalCode:
+          type: [string, "null"]
+    CustomerAccount:
+      type: object
+      required:
+        - accountId
+        - accountType
+        - balance
+        - currency
+      properties:
+        accountId:
+          type: integer
+          format: int64
+        accountType:
+          type: string
+          enum: [savingsAccount, checkingAccount]
+        balance:
+          type: number
+          format: double
+        currency:
+          type: string
+          enum: [NZD]
+    AccountTotal:
+      type: object
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+          enum: [NZD]

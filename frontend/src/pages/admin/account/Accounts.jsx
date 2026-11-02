@@ -5,6 +5,7 @@ import Sidebar from "../../../components/Sidebar";
 import Header from "../../../components/Header";
 import AccountPopUp from "../../../components/AccountPopUp"
 import { Link } from "react-router-dom";
+import { getAdminAuthConfig } from "../../../services/authService";
 
 const apiUrl = 'http://localhost:8080/sprint4Deliverable'
 
@@ -13,7 +14,7 @@ const fetchAccounts = (selectedCity) => {
     ? `${apiUrl}/account/getAll`
     : `${apiUrl}/account/getByCity?city=${selectedCity}`
 
-  return axios.get(url)
+  return axios.get(url, getAdminAuthConfig())
 }
 
 function Accounts() {
@@ -47,7 +48,8 @@ function Accounts() {
       for (const account of accounts) {
         try {
           const response = await axios.get(
-            `${apiUrl}/customer/get?customerId=${account.customerId}`
+            `${apiUrl}/customer/get?customerId=${account.customerId}`,
+            getAdminAuthConfig()
           );
           names[account.customerId] = response.data?.name || "";
         } catch (error) {
@@ -72,7 +74,7 @@ function Accounts() {
 
   const deleteAccount = (id) => {
     if (confirm("Are you sure you want to delete this account?")) {
-      axios.delete(apiUrl + '/account/delete?accountId=' + id)
+      axios.delete(apiUrl + '/account/delete?accountId=' + id, getAdminAuthConfig())
         .then(() => loadAccounts())
         .catch((error) => console.log(error))
     }

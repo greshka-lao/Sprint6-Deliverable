@@ -7,6 +7,9 @@ import Accounts from '../pages/admin/account/Accounts';
 /* ===== MOCKS ===== */
 
 vi.mock('axios');
+vi.stubGlobal('localStorage', {
+  getItem: vi.fn(() => 'admin-test-token'),
+});
 
 /* ===== PROPS ===== */
 
@@ -93,7 +96,8 @@ describe('Accounts', () => {
 
     await waitFor(() => {
       expect(axios.get).toHaveBeenCalledWith(
-        expect.stringContaining('/customer/get?customerId=1')
+        expect.stringContaining('/customer/get?customerId=1'),
+        { headers: { Authorization: 'Bearer admin-test-token' } }
       );
     });
     expect(await screen.findByText(customers[0].name)).toBeInTheDocument();
@@ -122,7 +126,8 @@ describe('Accounts', () => {
       expect(axios.get).toHaveBeenCalledWith(
         expect.stringContaining(
           '/account/getByCity?city=Auckland'
-        )
+        ),
+        { headers: { Authorization: 'Bearer admin-test-token' } }
       );
     });
   });
@@ -142,7 +147,8 @@ describe('Accounts', () => {
       expect(axios.get).toHaveBeenCalledWith(
         expect.stringContaining(
           '/account/get?accountId=' + accounts[0].accountId
-        )
+        ),
+        { headers: { Authorization: 'Bearer admin-test-token' } }
       );
       expect(screen.getByText(/Interest Rate/i)).toBeInTheDocument();
       expect(screen.getByText(accounts[0].interestRate*100 + "%")).toBeInTheDocument();
@@ -164,7 +170,8 @@ describe('Accounts', () => {
       expect(axios.get).toHaveBeenCalledWith(
         expect.stringContaining(
           '/account/get?accountId=' + accounts[1].accountId
-        )
+        ),
+        { headers: { Authorization: 'Bearer admin-test-token' } }
       );
       expect(screen.getByText(/Next Check Number/i)).toBeInTheDocument();
       expect(screen.getByText(accounts[1].nextCheckNumber)).toBeInTheDocument();
@@ -186,7 +193,8 @@ describe('Accounts', () => {
       expect(axios.get).toHaveBeenCalledWith(
         expect.stringContaining(
           '/account/get?accountId=' + accounts[0].accountId
-        )
+        ),
+        { headers: { Authorization: 'Bearer admin-test-token' } }
       );
     })
   });
@@ -206,7 +214,8 @@ describe('Accounts', () => {
       expect(axios.get).toHaveBeenCalledWith(
         expect.stringContaining(
           '/account/get?accountId=' + accounts[0].accountId
-        )
+        ),
+        { headers: { Authorization: 'Bearer admin-test-token' } }
       );
     })
   });
@@ -226,7 +235,8 @@ describe('Accounts', () => {
       expect(axios.get).toHaveBeenCalledWith(
         expect.stringContaining(
           '/account/get?accountId=' + accounts[0].accountId
-        )
+        ),
+        { headers: { Authorization: 'Bearer admin-test-token' } }
       );
     })
   });
@@ -252,7 +262,8 @@ describe('Accounts', () => {
       expect(axios.delete).toHaveBeenCalledWith(
         expect.stringContaining(
           '/account/delete?accountId=' + accounts[0].accountId
-        )
+        ),
+        { headers: { Authorization: 'Bearer admin-test-token' } }
       );
     });
   });

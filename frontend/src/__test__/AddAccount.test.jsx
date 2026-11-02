@@ -11,6 +11,9 @@ const mockNavigate = vi.fn();
 window.alert = vi.fn();
 
 vi.mock('axios');
+vi.stubGlobal('localStorage', {
+  getItem: vi.fn(() => 'admin-test-token'),
+});
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -134,7 +137,13 @@ describe('AddAccount', () => {
     await waitFor(() => {
       expect(axios.post).toHaveBeenCalledWith(
         "http://localhost:8080/sprint4Deliverable/account/save",
-        accounts[0]
+        accounts[0],
+        { headers: { Authorization: 'Bearer admin-test-token' } }
+      );
+      expect(axios.put).toHaveBeenCalledWith(
+        expect.stringContaining('/account/setCustomer?accountId='),
+        {},
+        { headers: { Authorization: 'Bearer admin-test-token' } }
       );
 
       expect(mockNavigate).toHaveBeenCalledWith('/admin/accounts');
@@ -193,7 +202,8 @@ describe('AddAccount', () => {
     await waitFor(() => {
       expect(axios.post).toHaveBeenCalledWith(
         "http://localhost:8080/sprint4Deliverable/account/save",
-        accounts[1]
+        accounts[1],
+        { headers: { Authorization: 'Bearer admin-test-token' } }
       );
     });
   });

@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import Sidebar from '../../../components/Sidebar'
 import Header from '../../../components/Header'
 import { getCustomers } from '../../../services/customerService'
+import { getAdminAuthConfig } from '../../../services/authService'
 
 function AddAccount() {
   const apiUrl = 'http://localhost:8080/sprint4Deliverable'
@@ -34,9 +35,13 @@ function AddAccount() {
 
   const sendAccountData = async (accountData) => {
     try {
-      const response = await axios.post(apiUrl + '/account/save', accountData)
+      const response = await axios.post(apiUrl + '/account/save', accountData, getAdminAuthConfig())
 
-      await axios.put(apiUrl + `/account/setCustomer?accountId=${response.data.accountId}&customerId=${accountData.customerId}`);
+      await axios.put(
+        apiUrl + `/account/setCustomer?accountId=${response.data.accountId}&customerId=${accountData.customerId}`,
+        {},
+        getAdminAuthConfig()
+      )
 
       navigate('/admin/accounts')
     } catch (error) {

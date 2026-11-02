@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { getAdminAuthConfig } from "../services/authService";
 
 function AccountPopUp({ accountId, selectAccountId }) {
   const apiUrl = 'http://localhost:8080/sprint4Deliverable'
@@ -10,7 +11,7 @@ function AccountPopUp({ accountId, selectAccountId }) {
 
   const deleteAccount = (id) => {
     if (confirm("Are you sure you want to delete this account?")) {
-      axios.delete(apiUrl + '/account/delete?accountId=' + id)
+      axios.delete(apiUrl + '/account/delete?accountId=' + id, getAdminAuthConfig())
         .then(() => {
           navigate("/admin/accounts");
           selectAccountId(null);
@@ -21,7 +22,7 @@ function AccountPopUp({ accountId, selectAccountId }) {
 
   useEffect(() => {
 
-    axios.get(apiUrl + '/account/get?accountId=' + accountId)
+    axios.get(apiUrl + '/account/get?accountId=' + accountId, getAdminAuthConfig())
       .then((response) => setAccount(response.data))
       .catch((error) => console.log(error));
 
@@ -30,7 +31,7 @@ function AccountPopUp({ accountId, selectAccountId }) {
   useEffect(() => {
     if (!account) return;
 
-    axios.get(apiUrl + '/customer/get?customerId=' + account.customerId)
+    axios.get(apiUrl + '/customer/get?customerId=' + account.customerId, getAdminAuthConfig())
       .then((response) => setCustomer(response.data))
       .catch((error) => console.log(error));
   }, [account])

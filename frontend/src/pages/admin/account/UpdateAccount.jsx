@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import Sidebar from '../../../components/Sidebar'
 import Header from '../../../components/Header'
 import { getCustomers } from '../../../services/customerService'
+import { getAdminAuthConfig } from '../../../services/authService'
 
 function UpdateAccount() {
   const { accountId } = useParams();
@@ -23,7 +24,7 @@ function UpdateAccount() {
     }
 
     const loadAccount = async () => {
-      axios.get(apiUrl + '/account/get?accountId=' + accountId)
+      axios.get(apiUrl + '/account/get?accountId=' + accountId, getAdminAuthConfig())
         .then((response) => {
           setCurrentAccount(response.data);
         })
@@ -37,10 +38,14 @@ function UpdateAccount() {
   const sendAccountData = async (accountData) => {
     try {
       // Update account (or create a new one if account type has changed)
-      const response = await axios.put(apiUrl + '/account/edit', accountData);
+      const response = await axios.put(apiUrl + '/account/edit', accountData, getAdminAuthConfig());
 
       // Assign customer to account
-      await axios.put(apiUrl + `/account/setCustomer?accountId=${response.data.accountId}&customerId=${accountData.customerId}`);
+      await axios.put(
+        apiUrl + `/account/setCustomer?accountId=${response.data.accountId}&customerId=${accountData.customerId}`,
+        {},
+        getAdminAuthConfig()
+      )
       
       navigate('/admin/accounts')
     } catch (error) {

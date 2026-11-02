@@ -53,6 +53,16 @@ export function getStoredToken() {
   return localStorage.getItem('hooperBankToken')
 }
 
+export function getAdminAuthConfig() {
+  const storage = globalThis.localStorage
+  const token = storage && typeof storage.getItem === 'function'
+    ? storage.getItem('hooperBankToken')
+    : null
+  return {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  }
+}
+
 export function setStoredToken(token) {
   if (token) {
     localStorage.setItem('hooperBankToken', token)

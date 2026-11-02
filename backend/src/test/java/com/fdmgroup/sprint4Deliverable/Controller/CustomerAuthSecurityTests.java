@@ -16,12 +16,30 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fdmgroup.sprint4Deliverable.Model.CheckingAccount;
+import com.fdmgroup.sprint4Deliverable.Model.Customer;
+import com.fdmgroup.sprint4Deliverable.Model.Address;
+import com.fdmgroup.sprint4Deliverable.Model.Person;
+import com.fdmgroup.sprint4Deliverable.Model.SavingsAccount;
+import com.fdmgroup.sprint4Deliverable.Repository.AccountRepository;
+import com.fdmgroup.sprint4Deliverable.Repository.AddressRepository;
+import com.fdmgroup.sprint4Deliverable.Repository.CustomerRepository;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 class CustomerAuthSecurityTests {
 
 	@Autowired
 	private MockMvc mockMvc;
+
+	@Autowired
+	private CustomerRepository customerRepository;
+
+	@Autowired
+	private AddressRepository addressRepository;
+
+	@Autowired
+	private AccountRepository accountRepository;
 
 	@Test
 	void csrfEndpointReturnsSessionBoundToken() throws Exception {
@@ -36,6 +54,12 @@ class CustomerAuthSecurityTests {
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.authenticated").value(false))
 				.andExpect(jsonPath("$.code").value("session_expired"));
+	}
+
+	@Test
+	void dashboardRejectsAnonymousRequests() throws Exception {
+		mockMvc.perform(get("/api/customer-auth/dashboard"))
+				.andExpect(status().isUnauthorized());
 	}
 
 	@Test
@@ -101,6 +125,24 @@ class CustomerAuthSecurityTests {
 		String username = registration.getResponse().getContentAsString()
 				.replaceAll(".*\"username\":\"([^\"]+)\".*", "$1");
 		session = (MockHttpSession) registration.getRequest().getSession(false);
+		Customer customer = customerRepository.findByUsername(username).orElseThrow();
+		accountRepository.saveAndFlush(new SavingsAccount(1234.56, customer, 0.02));
+		accountRepository.saveAndFlush(new CheckingAccount(987.65, customer, 123));
+
+		Address otherAddress = new Address();
+		otherAddress.setStreetNumber("99 Other Road");
+		otherAddress.setPostalCode("B2B 2B2");
+		otherAddress.setCity("Other City");
+		otherAddress.setProvince("Other Province");
+		addressRepository.saveAndFlush(otherAddress);
+		String otherIdentity = UUID.randomUUID().toString().replace("-", "");
+		Person otherCustomer = new Person("Other Customer", otherAddress, null);
+		otherCustomer.setUsername("other" + otherIdentity);
+		otherCustomer.setEmail(otherIdentity + "@example.com");
+		otherCustomer.setPhoneNumber("+15551234568");
+		otherCustomer.setPasswordHash("test-password-hash");
+		customerRepository.saveAndFlush(otherCustomer);
+		accountRepository.saveAndFlush(new CheckingAccount(5000, otherCustomer, 456));
 
 		MvcResult freshCsrf = mockMvc.perform(get("/api/customer-auth/csrf").session(session))
 				.andExpect(status().isOk())
@@ -122,6 +164,18 @@ class CustomerAuthSecurityTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.authenticated").value(true))
 				.andExpect(jsonPath("$.customer.username").value(username));
+
+		mockMvc.perform(get("/api/customer-auth/dashboard").session(session))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.profile.name").value(name))
+				.andExpect(jsonPath("$.profile.email").value(email))
+				.andExpect(jsonPath("$.profile.phoneNumber").value("+15551234567"))
+				.andExpect(jsonPath("$.profile.address.streetNumber").value("1 Main Street"))
+				.andExpect(jsonPath("$.accounts.length()").value(2))
+				.andExpect(jsonPath("$.accounts[0].currency").value("NZD"))
+				.andExpect(jsonPath("$.accounts[1].currency").value("NZD"))
+				.andExpect(jsonPath("$.total.amount").value(2222.21))
+				.andExpect(jsonPath("$.total.currency").value("NZD"));
 
 		mockMvc.perform(get("/customer/getAll").session(session))
 				.andExpect(status().isUnauthorized())

@@ -9,6 +9,9 @@ import UpdateAccount from '../pages/admin/account/UpdateAccount';
 const mockNavigate = vi.fn();
 
 vi.mock('axios');
+vi.stubGlobal('localStorage', {
+  getItem: vi.fn(() => 'admin-test-token'),
+});
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -175,6 +178,18 @@ describe('UpdateAccount', () => {
     );
 
     await waitFor(() => {
+      expect(axios.put).toHaveBeenNthCalledWith(
+        1,
+        "http://localhost:8080/sprint4Deliverable/account/edit",
+        expect.any(Object),
+        { headers: { Authorization: 'Bearer admin-test-token' } }
+      );
+      expect(axios.put).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('/account/setCustomer?accountId='),
+        {},
+        { headers: { Authorization: 'Bearer admin-test-token' } }
+      );
       expect(mockNavigate).toHaveBeenCalledWith('/admin/accounts');
     });
   });
@@ -234,6 +249,18 @@ describe('UpdateAccount', () => {
     );
 
     await waitFor(() => {
+      expect(axios.put).toHaveBeenNthCalledWith(
+        1,
+        "http://localhost:8080/sprint4Deliverable/account/edit",
+        expect.any(Object),
+        { headers: { Authorization: 'Bearer admin-test-token' } }
+      );
+      expect(axios.put).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('/account/setCustomer?accountId='),
+        {},
+        { headers: { Authorization: 'Bearer admin-test-token' } }
+      );
       expect(mockNavigate).toHaveBeenCalledWith('/admin/accounts');
     });
   });

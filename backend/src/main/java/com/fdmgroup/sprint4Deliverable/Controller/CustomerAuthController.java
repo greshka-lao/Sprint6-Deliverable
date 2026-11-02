@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fdmgroup.sprint4Deliverable.Model.CustomerAuthResponse;
+import com.fdmgroup.sprint4Deliverable.Model.CustomerDashboardResponse;
 import com.fdmgroup.sprint4Deliverable.Model.CustomerCsrfTokenResponse;
 import com.fdmgroup.sprint4Deliverable.Model.CustomerLoginRequest;
 import com.fdmgroup.sprint4Deliverable.Model.CustomerClaimCompletionRequest;
@@ -35,6 +36,7 @@ import com.fdmgroup.sprint4Deliverable.Service.CustomerAuthService.CustomerRateL
 import com.fdmgroup.sprint4Deliverable.Service.CustomerAuthService.DuplicateCustomerEmailException;
 import com.fdmgroup.sprint4Deliverable.Service.CustomerAuthService.RegistrationValidationException;
 import com.fdmgroup.sprint4Deliverable.Service.CustomerAuthService.ProfileClaimRequiredException;
+import com.fdmgroup.sprint4Deliverable.Service.CustomerDashboardService;
 import com.fdmgroup.sprint4Deliverable.Service.CustomerClaimService;
 import com.fdmgroup.sprint4Deliverable.Service.CustomerClaimService.ClaimValidationException;
 import com.fdmgroup.sprint4Deliverable.Service.CustomerClaimService.InvalidClaimReferenceException;
@@ -48,14 +50,22 @@ public class CustomerAuthController {
 
 	private final CustomerAuthService customerAuthService;
 	private final CustomerClaimService customerClaimService;
+	private final CustomerDashboardService customerDashboardService;
 	private final SecurityContextRepository securityContextRepository;
 
 	public CustomerAuthController(CustomerAuthService customerAuthService,
 			CustomerClaimService customerClaimService,
+			CustomerDashboardService customerDashboardService,
 			SecurityContextRepository customerSecurityContextRepository) {
 		this.customerAuthService = customerAuthService;
 		this.customerClaimService = customerClaimService;
+		this.customerDashboardService = customerDashboardService;
 		this.securityContextRepository = customerSecurityContextRepository;
+	}
+
+	@GetMapping("/dashboard")
+	public CustomerDashboardResponse dashboard(Authentication authentication) {
+		return customerDashboardService.getDashboard(authentication.getName());
 	}
 
 	@GetMapping("/csrf")

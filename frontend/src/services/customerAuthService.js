@@ -76,6 +76,10 @@ export async function getCustomerSession() {
   return request('/session')
 }
 
+export async function getCustomerDashboard() {
+  return request('/dashboard')
+}
+
 export async function logoutCustomer() {
   return request('/logout', {
     method: 'POST',
