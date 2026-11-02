@@ -1,13 +1,12 @@
 import '../../../App.css'
-import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Sidebar from '../../../components/Sidebar'
 import Header from '../../../components/Header'
+import { getCustomer, updateCustomer } from '../../../services/customerService'
 
 function UpdateCustomer() {
   const { customerId } = useParams();
-  const apiUrl = 'http://localhost:8080/sprint4Deliverable'
 
   const [currentCustomer, setCurrentCustomer] = useState(null)
 
@@ -16,7 +15,7 @@ function UpdateCustomer() {
 
   useEffect(() => {
     const loadCustomer = async () => {
-      axios.get(apiUrl + '/customer/get?customerId=' + customerId)
+      getCustomer(customerId)
         .then((response) => {
           setCurrentCustomer(response.data);
         })
@@ -24,13 +23,13 @@ function UpdateCustomer() {
     }
     
     loadCustomer()
-  }, []);
+  }, [customerId]);
 
   const sendCustomerData = async (customerData) => {
     try {
 
       // Edit current customer
-      await axios.put(apiUrl + '/customer/edit', customerData)
+      await updateCustomer(customerData)
       navigate('/admin/customers')
 
     } catch (error) {

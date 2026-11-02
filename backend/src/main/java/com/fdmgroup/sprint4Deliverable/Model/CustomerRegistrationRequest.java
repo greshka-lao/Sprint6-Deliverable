@@ -5,7 +5,8 @@ public record CustomerRegistrationRequest(
 		AddressRequest address,
 		String email,
 		String phoneNumber,
-		String password) {
+		String password,
+		String customerType) {
 
 	public record AddressRequest(String streetNumber, String postalCode, String city, String province) {
 	}

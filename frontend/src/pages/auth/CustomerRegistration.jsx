@@ -1,11 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Header from '../../components/Header'
-import { registerCustomer } from '../../services/customerAuthService'
+import {
+  completeCustomerClaim,
+  getCustomerClaimStatus,
+  registerCustomer,
+  requestCustomerClaim
+} from '../../services/customerAuthService'
 import '../../App.css'
 
 const initialDetails = {
   name: '',
+  customerType: '',
   address: { streetNumber: '', postalCode: '', city: '', province: '' },
   email: '',
   phoneNumber: '',
@@ -16,7 +22,31 @@ function CustomerRegistration() {
   const [details, setDetails] = useState(initialDetails)
   const [error, setError] = useState('')
   const [registered, setRegistered] = useState(null)
+  const [registrationMode, setRegistrationMode] = useState('register')
+  const [claim, setClaim] = useState(null)
+  const [claimState, setClaimState] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!claim?.claimReference || claimState !== 'PENDING') return undefined
+
+    let active = true
+    const pollStatus = async () => {
+      try {
+        const status = await getCustomerClaimStatus(claim.claimReference)
+        if (active) setClaimState(status.state)
+      } catch {
+        if (active) setError('Unable to check your claim status. Please try again later.')
+      }
+    }
+
+    pollStatus()
+    const intervalId = window.setInterval(pollStatus, 4000)
+    return () => {
+      active = false
+      window.clearInterval(intervalId)
+    }
+  }, [claim, claimState])
 
   const updateAddress = (event) => {
     const { name, value } = event.target
@@ -29,9 +59,26 @@ function CustomerRegistration() {
     setRegistered(null)
     setSubmitting(true)
     try {
-      const result = await registerCustomer(details)
-      setRegistered(result)
-      setDetails(initialDetails)
+      if (registrationMode === 'claim' && claimState === 'APPROVED' && claim?.claimReference) {
+        const result = await completeCustomerClaim(claim.claimReference, details.password)
+        setRegistered(result)
+        setClaimState('COMPLETED')
+      } else if (registrationMode === 'claim') {
+        const claimDetails = { ...details }
+        delete claimDetails.password
+        const result = await requestCustomerClaim(claimDetails)
+        if (result.claimReference) {
+          setClaim(result)
+          setClaimState(result.state)
+          setError('')
+        } else {
+          setError(result.message)
+        }
+      } else {
+        const result = await registerCustomer(details)
+        setRegistered(result)
+        setDetails(initialDetails)
+      }
     } catch (registrationError) {
       setError(registrationError.message)
     } finally {
@@ -55,11 +102,42 @@ function CustomerRegistration() {
           ) : (
             <form className="auth-form customer-registration-form" onSubmit={handleSubmit}>
               <label className="auth-field">
+                <span className="auth-field-label visible">Registration type</span>
+                <select
+                  aria-label="Registration type"
+                  value={registrationMode}
+                  onChange={(event) => {
+                    setRegistrationMode(event.target.value)
+                    setClaim(null)
+                    setClaimState('')
+                    setError('')
+                  }}
+                >
+                  <option value="register">Create a new account</option>
+                  <option value="claim">Claim an existing profile</option>
+                </select>
+              </label>
+              <label className="auth-field">
                 <span className={`auth-field-label ${details.name ? 'visible' : ''}`} style={{ display: details.name ? 'block' : 'none' }}>Full Name</span>
                 <input name="name" aria-label="Full Name" autoComplete="name" placeholder="Full Name" required maxLength={200}
                   value={details.name}
                   onChange={(event) => setDetails((current) => ({ ...current, name: event.target.value }))} />
               </label>
+              <label className="auth-field">
+                <span className="auth-field-label visible">Customer type</span>
+                <select
+                  name="customerType"
+                  aria-label="Customer type"
+                  required
+                  value={details.customerType}
+                  onChange={(event) => setDetails((current) => ({ ...current, customerType: event.target.value }))}
+                >
+                  <option value="" disabled>Select person or company</option>
+                  <option value="person">Person</option>
+                  <option value="company">Company</option>
+                </select>
+              </label>
+              {(registrationMode === 'register' || claimState === 'APPROVED') && (
               <label className="auth-field">
                 <span className={`auth-field-label ${details.password ? 'visible' : ''}`} style={{ display: details.password ? 'block' : 'none' }}>
                   Password (at least 8 characters)
@@ -69,6 +147,7 @@ function CustomerRegistration() {
                   value={details.password}
                   onChange={(event) => setDetails((current) => ({ ...current, password: event.target.value }))} />
               </label>
+              )}
               <p className="auth-section-title">Address</p>
               <label className="auth-field">
                 <span className={`auth-field-label ${details.address.streetNumber ? 'visible' : ''}`} style={{ display: details.address.streetNumber ? 'block' : 'none' }}>
@@ -110,8 +189,21 @@ function CustomerRegistration() {
                   onChange={(event) => setDetails((current) => ({ ...current, phoneNumber: event.target.value }))} />
               </label>
               {error && <div className="auth-error" role="alert">{error}</div>}
-              <button type="submit" disabled={submitting}>
-                {submitting ? 'Creating account...' : 'Create account'}
+              {claimState && (
+                <div role="status" className="auth-success">
+                  {claimState === 'PENDING' && 'Your claim is awaiting administrator review.'}
+                  {claimState === 'APPROVED' && 'Your claim is approved. Set a password to finish registration.'}
+                  {claimState === 'REJECTED' && 'Your claim was not approved.'}
+                </div>
+              )}
+              <button type="submit" disabled={submitting || claimState === 'PENDING' || claimState === 'REJECTED'}>
+                {submitting
+                  ? 'Submitting...'
+                  : claimState === 'APPROVED'
+                    ? 'Set password'
+                    : registrationMode === 'claim'
+                      ? 'Request profile claim'
+                      : 'Create account'}
               </button>
             </form>
           )}

@@ -11,7 +11,11 @@ import com.fdmgroup.sprint4Deliverable.Model.AdminUser;
 
 public class AdminUserDetails implements UserDetails {
 
-    private final Long id;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private final Long id;
     private final String username;
     private final String password;
     private final String role;

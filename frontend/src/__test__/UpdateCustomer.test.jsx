@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import UpdateCustomer from '../pages/customer/UpdateCustomer'
+import UpdateCustomer from '../pages/admin/customer/UpdateCustomer';
 import axios from 'axios'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -35,6 +35,7 @@ const oldCustomers = [
     customerId: 1,
     name: 'Greshka Lao',
     address: {
+      addressId: 1,
       streetNumber: "67 Queen Street",
       city: "Christchurch",
       province: "Canterbury",
@@ -46,6 +47,7 @@ const oldCustomers = [
     customerId: 2,
     name: 'FDM Group',
     address: {
+      addressId: 2,
       streetNumber: "697 Collins Street",
       city: "Melbourne",
       province: "Victoria",
@@ -83,7 +85,8 @@ describe('UpdateCustomer', () => {
 
     await waitFor(() => {
       expect(axios.get).toHaveBeenCalledWith(
-        'http://localhost:8080/sprint4Deliverable/customer/get?customerId=' + oldCustomers[0].customerId
+        'http://localhost:8080/sprint4Deliverable/customer/get?customerId=' + oldCustomers[0].customerId,
+        expect.any(Object)
       )
     })
   })
@@ -163,7 +166,8 @@ describe('UpdateCustomer', () => {
         {
           ...oldCustomers[0],
           name: 'Lyn Lapid'
-        }
+        },
+        expect.any(Object)
       )
     })
 
@@ -226,12 +230,14 @@ describe('UpdateCustomer', () => {
           customerType: 'person',
           name: oldCustomers[0].name,
           address: {
+            addressId: oldCustomers[0].address.addressId,
             streetNumber: oldCustomers[0].address.streetNumber,
             city: "",
             province: "",
             postalCode: "hello"
           }
-        }
+        },
+        expect.any(Object)
       );
     });
 
@@ -269,12 +275,14 @@ describe('UpdateCustomer', () => {
           customerType: 'person',
           name: oldCustomers[0].name,
           address: {
+            addressId: oldCustomers[0].address.addressId,
             streetNumber: oldCustomers[0].address.streetNumber,
             city: "Sydney",
             province: "Wellington",
             postalCode: oldCustomers[0].address.postalCode
           }
-        }
+        },
+        expect.any(Object)
       );
     });
   });

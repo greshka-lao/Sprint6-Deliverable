@@ -16,7 +16,7 @@ function CustomerHome() {
             <h2>Customer Dashboard</h2>
           </div>
           <section className="dashboard-card">
-            <h3>Welcome, {customer?.username || 'Customer'}</h3>
+            <h3>Welcome, {customer?.username || 'Customer'}</h3> 
             <p>Your customer account is signed in and ready to use.</p>
             <p>Customer services will appear here.</p>
           </section>

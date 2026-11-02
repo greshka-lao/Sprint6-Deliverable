@@ -15,12 +15,18 @@ import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fdmgroup.sprint4Deliverable.Model.CustomerAuthResponse;
 import com.fdmgroup.sprint4Deliverable.Model.CustomerCsrfTokenResponse;
 import com.fdmgroup.sprint4Deliverable.Model.CustomerLoginRequest;
+import com.fdmgroup.sprint4Deliverable.Model.CustomerClaimCompletionRequest;
+import com.fdmgroup.sprint4Deliverable.Model.CustomerClaimCompletionResponse;
+import com.fdmgroup.sprint4Deliverable.Model.CustomerClaimStatusResponse;
+import com.fdmgroup.sprint4Deliverable.Model.CustomerClaimSubmissionRequest;
+import com.fdmgroup.sprint4Deliverable.Model.CustomerClaimSubmissionResponse;
 import com.fdmgroup.sprint4Deliverable.Model.CustomerRegistrationRequest;
 import com.fdmgroup.sprint4Deliverable.Model.CustomerRegistrationResponse;
 import com.fdmgroup.sprint4Deliverable.Model.CustomerSessionResponse;
@@ -28,6 +34,10 @@ import com.fdmgroup.sprint4Deliverable.Service.CustomerAuthService;
 import com.fdmgroup.sprint4Deliverable.Service.CustomerAuthService.CustomerRateLimitException;
 import com.fdmgroup.sprint4Deliverable.Service.CustomerAuthService.DuplicateCustomerEmailException;
 import com.fdmgroup.sprint4Deliverable.Service.CustomerAuthService.RegistrationValidationException;
+import com.fdmgroup.sprint4Deliverable.Service.CustomerAuthService.ProfileClaimRequiredException;
+import com.fdmgroup.sprint4Deliverable.Service.CustomerClaimService;
+import com.fdmgroup.sprint4Deliverable.Service.CustomerClaimService.ClaimValidationException;
+import com.fdmgroup.sprint4Deliverable.Service.CustomerClaimService.InvalidClaimReferenceException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,11 +47,14 @@ import jakarta.servlet.http.HttpServletResponse;
 public class CustomerAuthController {
 
 	private final CustomerAuthService customerAuthService;
+	private final CustomerClaimService customerClaimService;
 	private final SecurityContextRepository securityContextRepository;
 
 	public CustomerAuthController(CustomerAuthService customerAuthService,
+			CustomerClaimService customerClaimService,
 			SecurityContextRepository customerSecurityContextRepository) {
 		this.customerAuthService = customerAuthService;
+		this.customerClaimService = customerClaimService;
 		this.securityContextRepository = customerSecurityContextRepository;
 	}
 
@@ -67,6 +80,60 @@ public class CustomerAuthController {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
 					"code", "duplicate_identity",
 					"message", "That email address is already in use."));
+		} catch (ProfileClaimRequiredException exception) {
+			return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+					"code", "profile_claim_required",
+					"message", "An existing profile requires an administrator-approved claim."));
+		}
+	}
+
+	@PostMapping("/claims")
+	public ResponseEntity<CustomerClaimSubmissionResponse> submitClaim(
+			@RequestBody(required = false) CustomerClaimSubmissionRequest request) {
+		if (request == null) {
+			return ResponseEntity.badRequest().build();
+		}
+		try {
+			return ResponseEntity.accepted().body(customerClaimService.submit(
+					request.name(), request.customerType(), request.address(),
+					request.email(), request.phoneNumber()));
+		} catch (ClaimValidationException exception) {
+			return ResponseEntity.badRequest().body(new CustomerClaimSubmissionResponse(
+					"INVALID", null, "Enter complete details and correct any invalid values."));
+		}
+	}
+
+	@GetMapping("/claims/status")
+	public ResponseEntity<?> claimStatus(
+			@RequestHeader(value = "X-Customer-Claim-Reference", required = false) String reference) {
+		try {
+			CustomerClaimStatusResponse response = customerClaimService.status(reference);
+			return ResponseEntity.ok(response);
+		} catch (InvalidClaimReferenceException exception) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+					"code", "invalid_claim_reference",
+					"message", "The claim reference is invalid or no longer available."));
+		}
+	}
+
+	@PostMapping("/claims/complete")
+	public ResponseEntity<?> completeClaim(
+			@RequestHeader(value = "X-Customer-Claim-Reference", required = false) String reference,
+			@RequestBody(required = false) CustomerClaimCompletionRequest request) {
+		if (request == null) {
+			return ResponseEntity.badRequest().body(Map.of(
+					"code", "validation_error", "message", "Enter a valid password."));
+		}
+		try {
+			CustomerClaimCompletionResponse response = customerClaimService.complete(reference, request.password());
+			return ResponseEntity.ok(response);
+		} catch (ClaimValidationException exception) {
+			return ResponseEntity.badRequest().body(Map.of(
+					"code", "validation_error", "message", "Enter a password with at least 8 characters."));
+		} catch (InvalidClaimReferenceException exception) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+					"code", "invalid_claim_reference",
+					"message", "The claim reference is invalid or no longer available."));
 		}
 	}
 

@@ -31,7 +31,7 @@ public abstract class Account {
 	private double balance;
 
 	@ManyToOne
-	@JoinColumn(name = "fk_cust_id")
+	@JoinColumn(name = "fk_cust_id", referencedColumnName = "customer_id")
 	@JsonIgnore
 	private Customer customer;
 	

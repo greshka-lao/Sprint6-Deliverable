@@ -5,15 +5,15 @@ import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
 
-import com.fdmgroup.sprint4Deliverable.Repository.CustomerAccountRepository;
+import com.fdmgroup.sprint4Deliverable.Repository.CustomerRepository;
 
 @Service
 public class CustomerUsernameService {
 
 	private static final Pattern WHITESPACE = Pattern.compile("\\s+");
-	private final CustomerAccountRepository repository;
+	private final CustomerRepository repository;
 
-	public CustomerUsernameService(CustomerAccountRepository repository) {
+	public CustomerUsernameService(CustomerRepository repository) {
 		this.repository = repository;
 	}
 

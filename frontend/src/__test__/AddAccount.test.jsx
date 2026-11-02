@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import axios from 'axios';
-import AddAccount from '../pages/account/AddAccount';
+import AddAccount from '../pages/admin/account/AddAccount';
 
 /* ===== MOCKS ===== */
 

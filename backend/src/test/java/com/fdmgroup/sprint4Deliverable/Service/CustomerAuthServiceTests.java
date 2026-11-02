@@ -2,6 +2,7 @@ package com.fdmgroup.sprint4Deliverable.Service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.when;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -17,10 +19,13 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.fdmgroup.sprint4Deliverable.Model.CustomerAccount;
+import com.fdmgroup.sprint4Deliverable.Model.Company;
+import com.fdmgroup.sprint4Deliverable.Model.Customer;
 import com.fdmgroup.sprint4Deliverable.Model.CustomerRegistrationRequest;
 import com.fdmgroup.sprint4Deliverable.Model.CustomerRegistrationRequest.AddressRequest;
-import com.fdmgroup.sprint4Deliverable.Repository.CustomerAccountRepository;
+import com.fdmgroup.sprint4Deliverable.Model.Person;
+import com.fdmgroup.sprint4Deliverable.Repository.AddressRepository;
+import com.fdmgroup.sprint4Deliverable.Repository.CustomerRepository;
 import com.fdmgroup.sprint4Deliverable.Service.CustomerAuthService.CustomerRateLimitException;
 import com.fdmgroup.sprint4Deliverable.Service.CustomerAuthService.RegistrationValidationException;
 
@@ -30,7 +35,10 @@ import jakarta.servlet.http.HttpServletRequest;
 class CustomerAuthServiceTests {
 
 	@Mock
-	private CustomerAccountRepository repository;
+	private CustomerRepository customerRepository;
+	
+	@Mock
+	private AddressRepository addressRepository;
 
 	@Mock
 	private PasswordEncoder passwordEncoder;
@@ -43,23 +51,55 @@ class CustomerAuthServiceTests {
 
 	@BeforeEach
 	void setUp() {
-		usernameService = new CustomerUsernameService(repository);
+		usernameService = new CustomerUsernameService(customerRepository);
 		customerAuthService = new CustomerAuthService(
-				repository, usernameService, passwordEncoder, authenticationManager);
+				customerRepository, addressRepository, usernameService, passwordEncoder, authenticationManager);
 	}
 
 	@Test
 	void registerCreatesCustomerOnlyIdentityAndReturnsGeneratedUsername() {
-		when(repository.existsByUsername("greshkalao001")).thenReturn(false);
+		when(customerRepository.existsByUsername("greshkalao001")).thenReturn(false);
 		when(passwordEncoder.encode("customer-password")).thenReturn("{bcrypt}encoded");
-		when(repository.saveAndFlush(any(CustomerAccount.class)))
+		when(customerRepository.saveAndFlush(any(Customer.class)))
 				.thenAnswer(invocation -> invocation.getArgument(0));
 
 		var response = customerAuthService.register(validRequest());
 
 		assertEquals("greshkalao001", response.username());
 		assertEquals("Greshka Lao", response.name());
-		verify(repository).saveAndFlush(any(CustomerAccount.class));
+		verify(customerRepository).saveAndFlush(any(Customer.class));
+		ArgumentCaptor<Customer> savedCustomer = ArgumentCaptor.forClass(Customer.class);
+		verify(customerRepository).saveAndFlush(savedCustomer.capture());
+		assertEquals("person", savedCustomer.getValue().getCustomerType());
+		assertTrue(savedCustomer.getValue() instanceof Person);
+		assertEquals(0L, savedCustomer.getValue().getCustomerId());
+	}
+
+	@Test
+	void registerCreatesTheSelectedCompanyProfile() {
+		when(customerRepository.existsByUsername("greshkalao001")).thenReturn(false);
+		when(passwordEncoder.encode("customer-password")).thenReturn("{bcrypt}encoded");
+		when(customerRepository.saveAndFlush(any(Customer.class)))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+		customerAuthService.register(validRequest("company"));
+
+		ArgumentCaptor<Customer> savedCustomer = ArgumentCaptor.forClass(Customer.class);
+		verify(customerRepository).saveAndFlush(savedCustomer.capture());
+		assertEquals("company", savedCustomer.getValue().getCustomerType());
+		assertTrue(savedCustomer.getValue() instanceof Company);
+		assertEquals(0L, savedCustomer.getValue().getCustomerId());
+	}
+
+	@Test
+	void registrationRejectsMissingCustomerType() {
+		CustomerRegistrationRequest request = new CustomerRegistrationRequest(
+				"Greshka Lao",
+				new AddressRequest("1 Main Street", "A1A 1A1", "Example City", "Example Province"),
+				"greshka@example.com", "+15551234567", "customer-password", null);
+
+		assertThrows(RegistrationValidationException.class,
+				() -> customerAuthService.register(request));
 	}
 
 	@Test
@@ -67,7 +107,7 @@ class CustomerAuthServiceTests {
 		CustomerRegistrationRequest request = new CustomerRegistrationRequest(
 				"Greshka Lao",
 				new AddressRequest("1 Main Street", "A1A 1A1", "Example City", "Example Province"),
-				"greshka@example.com", "555-1234", "customer-password");
+				"greshka@example.com", "555-1234", "customer-password", "person");
 
 		assertThrows(RegistrationValidationException.class,
 				() -> customerAuthService.register(request));
@@ -75,9 +115,9 @@ class CustomerAuthServiceTests {
 
 	@Test
 	void concurrentUsernameCollisionRetriesNextSuffix() {
-		when(repository.existsByUsername("greshkalao001")).thenReturn(false, true);
+		when(customerRepository.existsByUsername("greshkalao001")).thenReturn(false, true);
 		when(passwordEncoder.encode("customer-password")).thenReturn("{bcrypt}encoded");
-		when(repository.saveAndFlush(any(CustomerAccount.class)))
+		when(customerRepository.saveAndFlush(any(Customer.class)))
 				.thenThrow(new DataIntegrityViolationException("username collision"))
 				.thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -104,9 +144,13 @@ class CustomerAuthServiceTests {
 	}
 
 	private CustomerRegistrationRequest validRequest() {
+		return validRequest("person");
+	}
+
+	private CustomerRegistrationRequest validRequest(String customerType) {
 		return new CustomerRegistrationRequest(
 				"Greshka Lao",
 				new AddressRequest("1 Main Street", "A1A 1A1", "Example City", "Example Province"),
-				"Greshka@example.com", "+15551234567", "customer-password");
+				"Greshka@example.com", "+15551234567", "customer-password", customerType);
 	}
 }

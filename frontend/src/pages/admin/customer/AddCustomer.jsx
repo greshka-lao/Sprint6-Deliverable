@@ -1,18 +1,17 @@
 import '../../../App.css'
-import axios from 'axios'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Sidebar from '../../../components/Sidebar'
 import Header from '../../../components/Header'
+import { createCustomer } from '../../../services/customerService'
 
 function AddCustomer() {
-  const apiUrl = 'http://localhost:8080/sprint4Deliverable'
   const [message, setMessage] = useState('')
   const navigate = useNavigate()
 
   const sendCustomerData = async (customerData) => {
     try {
-      await axios.post(apiUrl + '/customer/save', customerData)
+      await createCustomer(customerData)
       navigate('/admin/customers')
     } catch (error) {
       if (error.response?.status == 400 && error.response?.data == "Postal code not found") {
@@ -63,7 +62,8 @@ function AddCustomer() {
           <form id="customerForm" onSubmit={handleSubmit}>
 
               <label for="customerType">Customer Type:</label>
-              <select name="customerType" id="customerType">
+              <select name="customerType" id="customerType" defaultValue="" required>
+                <option value="" disabled>Select customer type</option>
                 <option value="person">Person</option>
                 <option value="company">Company</option>
               </select>

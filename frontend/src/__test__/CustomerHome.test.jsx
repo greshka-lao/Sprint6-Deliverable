@@ -37,7 +37,7 @@ describe('CustomerHome', () => {
     expect(screen.getByRole('heading', { name: 'Customer Dashboard' })).toBeInTheDocument()
     expect(screen.getByText('Welcome, greshkalao001')).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Customer navigation' }))
-      .toContainElement(screen.getByRole('link', { name: 'Customer Home' }))
+      .toContainElement(screen.getByRole('link', { name: 'Dashboard' }))
     expect(screen.queryByRole('link', { name: 'Manage Customers' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
   })

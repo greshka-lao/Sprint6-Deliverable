@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -37,10 +36,12 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import jakarta.servlet.Filter;
+import jakarta.persistence.EntityNotFoundException;
 
 import com.fdmgroup.sprint4Deliverable.Exception.IncorrectCityOrProvinceException;
 import com.fdmgroup.sprint4Deliverable.Model.AdminUser;
 import com.fdmgroup.sprint4Deliverable.Model.Account;
+import com.fdmgroup.sprint4Deliverable.Model.AdminCustomerListItem;
 import com.fdmgroup.sprint4Deliverable.Model.Address;
 import com.fdmgroup.sprint4Deliverable.Model.CheckingAccount;
 import com.fdmgroup.sprint4Deliverable.Model.Company;
@@ -48,6 +49,8 @@ import com.fdmgroup.sprint4Deliverable.Model.Customer;
 import com.fdmgroup.sprint4Deliverable.Model.Person;
 import com.fdmgroup.sprint4Deliverable.Model.SavingsAccount;
 import com.fdmgroup.sprint4Deliverable.Model.Role;
+import com.fdmgroup.sprint4Deliverable.Controller.AccountController;
+import com.fdmgroup.sprint4Deliverable.Controller.CustomerController;
 import com.fdmgroup.sprint4Deliverable.Repository.AccountRepository;
 import com.fdmgroup.sprint4Deliverable.Repository.AddressRepository;
 import com.fdmgroup.sprint4Deliverable.Repository.AdminUserRepository;
@@ -55,6 +58,7 @@ import com.fdmgroup.sprint4Deliverable.Repository.CustomerRepository;
 import com.fdmgroup.sprint4Deliverable.Repository.RoleRepository;
 import com.fdmgroup.sprint4Deliverable.Service.AccountService;
 import com.fdmgroup.sprint4Deliverable.Service.AddressService;
+import com.fdmgroup.sprint4Deliverable.Service.AuthService;
 import com.fdmgroup.sprint4Deliverable.Service.CustomerService;
 import com.fdmgroup.sprint4Deliverable.Util.Location;
 import com.fdmgroup.sprint4Deliverable.Util.PostalCodeLookup;
@@ -65,6 +69,24 @@ import tools.jackson.databind.ObjectMapper;
 @AutoConfigureMockMvc
 @ExtendWith(MockitoExtension.class)
 class Sprint4DeliverableApplicationTests {
+
+	private static Customer person(String name, Address address) {
+		return new Person(name, address, null);
+	}
+
+	private static Customer company(String name, Address address) {
+		return new Company(name, address, null);
+	}
+
+	private MockMvc customerControllerMvc(CustomerService service) {
+		return MockMvcBuilders.standaloneSetup(new CustomerController(
+				service, mock(AddressService.class), mock(AuthService.class))).build();
+	}
+
+	private MockMvc accountControllerMvc(AccountService service) {
+		return MockMvcBuilders.standaloneSetup(new AccountController(
+				service, mock(CustomerService.class), mock(AuthService.class))).build();
+	}
 	
 	ObjectMapper objectMapper = new ObjectMapper();
 	
@@ -143,7 +165,7 @@ class Sprint4DeliverableApplicationTests {
 	public void savePerson_returns200() throws Exception {
 		
 		Address newAddress = new Address("300 Barangaroo Avenue", "2000", "Sydney", "New South Wales");
-		Customer newCustomer = new Person("John Doe", newAddress, new ArrayList<>());
+		Customer newCustomer = person("John Doe", newAddress);
 		
 		String customerJson = objectMapper.writeValueAsString(newCustomer);
 		
@@ -157,7 +179,7 @@ class Sprint4DeliverableApplicationTests {
 	public void saveCompany_returns200() throws Exception {
 		
 		Address newAddress = new Address("300 Barangaroo Avenue", "2000", "Sydney", "New South Wales");
-		Customer newCustomer = new Company("FDM Group", newAddress, new ArrayList<>());
+		Customer newCustomer = company("FDM Group", newAddress);
 		
 		String customerJson = objectMapper.writeValueAsString(newCustomer);
 		
@@ -169,9 +191,13 @@ class Sprint4DeliverableApplicationTests {
 	
 	@Test
 	public void findCustomerById_returns200() throws Exception {
-		
 		Long id = 1L;
-		
+
+		Customer expectedCustomer = company("Test", new Address());
+		expectedCustomer.setCustomerId(id);
+		when(customerRepo.findById(id)).thenReturn(Optional.of(expectedCustomer));
+
+		mvc = customerControllerMvc(customerService);
 		mvc.perform(MockMvcRequestBuilders.get("/customer/get")
 	            						  .param("customerId", Long.toString(id)))
 	       .andExpect(MockMvcResultMatchers.status().isOk());
@@ -182,7 +208,7 @@ class Sprint4DeliverableApplicationTests {
 		
 		Long id = 1L;
 
-        Customer expectedCustomer = new Company();
+        Customer expectedCustomer = company("Test", new Address());
         expectedCustomer.setCustomerId(id);
 
         when(customerRepo.findById(id))
@@ -208,15 +234,15 @@ class Sprint4DeliverableApplicationTests {
 
 	@Test
 	public void editPerson_returns200() throws Exception {
-		
 		// New customer data coming from the request
 		Long id = 1L;
 	    Address newAddress = new Address("697 Collins Street", "3000", "Melbourne", "Victoria");
-	    Customer newCustomer = new Person("Greshka Lao", newAddress, new ArrayList<>());
+	    Customer newCustomer = person("Greshka Lao", newAddress);
 	    newCustomer.setCustomerId(id);
 
 	    String customerJson = objectMapper.writeValueAsString(newCustomer);
 
+		mvc = customerControllerMvc(mock(CustomerService.class));
 	    mvc.perform(MockMvcRequestBuilders.put("/customer/edit")
 	            						  .contentType(MediaType.APPLICATION_JSON)
 	            						  .content(customerJson))
@@ -225,15 +251,15 @@ class Sprint4DeliverableApplicationTests {
 	
 	@Test
 	public void editCompany_returns200() throws Exception {
-		
 		// New customer data coming from the request
 		Long id = 1L;
 	    Address newAddress = new Address("14 Show Place", "8011", "Christchurch", "Canterbury");
-	    Customer newCustomer = new Company("IAG", newAddress, new ArrayList<>());
+	    Customer newCustomer = company("IAG", newAddress);
 	    newCustomer.setCustomerId(id);
 
 	    String customerJson = objectMapper.writeValueAsString(newCustomer);
 
+		mvc = customerControllerMvc(mock(CustomerService.class));
 	    mvc.perform(MockMvcRequestBuilders.put("/customer/edit")
 	            						  .contentType(MediaType.APPLICATION_JSON)
 	            						  .content(customerJson))
@@ -247,12 +273,12 @@ class Sprint4DeliverableApplicationTests {
 
 	    // Existing customer in the database
 	    Address existingAddress = new Address("300 Barangaroo Avenue", "2000", "Sydney", "New South Wales");
-	    Customer existingCustomer = new Person("John Doe", existingAddress, new ArrayList<>());
+	    Customer existingCustomer = person("John Doe", existingAddress);
 	    existingCustomer.setCustomerId(id);
 
 	    // New customer data coming from the request
 	    Address newAddress = new Address("697 Collins Street", "3000", "Melbourne", "Victoria");
-	    Customer newCustomer = new Person("Greshka Lao", newAddress, new ArrayList<>());
+	    Customer newCustomer = person("Greshka Lao", newAddress);
 	    newCustomer.setCustomerId(id);
 	    
 	    when(customerRepo.findById(id)).thenReturn(Optional.of(existingCustomer));
@@ -276,19 +302,18 @@ class Sprint4DeliverableApplicationTests {
 
 	    // Existing customer in the database
 	    Address existingAddress = new Address("300 Barangaroo Avenue", "2000", "Sydney", "New South Wales");
-	    Customer existingCustomer = new Person("John Doe", existingAddress, new ArrayList<>());
+	    Customer existingCustomer = person("John Doe", existingAddress);
 	    existingCustomer.setCustomerId(id);
 
 	    // New customer data coming from the request
 	    Address newAddress = new Address("697 Collins Street", "3000", "Melbourne", "Victoria");
-	    Customer newCustomer = new Person("Greshka Lao", newAddress, new ArrayList<>());
+	    Customer newCustomer = person("Greshka Lao", newAddress);
 	    newCustomer.setCustomerId(id);
 	    
 	    when(customerRepo.findById(id)).thenReturn(Optional.empty());
 
-	    customerService.editCustomer(newCustomer);
+	    assertThrows(EntityNotFoundException.class, () -> customerService.editCustomer(newCustomer));
 
-	    // Check that the existing customer was not updated
 	    assertEquals("John Doe", existingCustomer.getName());
 	    assertEquals("300 Barangaroo Avenue", existingCustomer.getAddress().getStreetNumber());
 	    assertEquals("2000", existingCustomer.getAddress().getPostalCode());
@@ -306,12 +331,12 @@ class Sprint4DeliverableApplicationTests {
 
 	    // Existing customer in the database
 	    Address existingAddress = new Address("300 Barangaroo Avenue", "2000", "Sydney", "New South Wales");
-	    Customer existingCustomer = new Company("FDM Group", existingAddress, new ArrayList<>());
+	    Customer existingCustomer = company("FDM Group", existingAddress);
 	    existingCustomer.setCustomerId(id);
 
 	    // New customer data coming from the request
 	    Address newAddress = new Address("14 Show Place", "8011", "Christchurch", "Canterbury");
-	    Customer newCustomer = new Company("IAG", newAddress, new ArrayList<>());
+	    Customer newCustomer = company("IAG", newAddress);
 	    newCustomer.setCustomerId(id);
 	    
 	    when(customerRepo.findById(id)).thenReturn(Optional.of(existingCustomer));
@@ -329,29 +354,33 @@ class Sprint4DeliverableApplicationTests {
 	}
 	
 	@Test
-	public void deleteCustomer_returns200() throws Exception {
-		
+	public void deleteCustomer_returnsNoContent() throws Exception {
 		Long id = 60L;
-		
+		CustomerService service = mock(CustomerService.class);
+		when(service.deleteCustomer(id)).thenReturn(true);
+
+		mvc = customerControllerMvc(service);
 		mvc.perform(MockMvcRequestBuilders.delete("/customer/delete")
 	            						  .param("customerId", Long.toString(id)))
-	       .andExpect(MockMvcResultMatchers.status().isOk());
+	       .andExpect(MockMvcResultMatchers.status().isNoContent());
 	}
 	
 	@Test
-	public void deleteCustomer_callsRepo_deletesCustomer() {
+	public void deleteCustomer_callsRepo_softDeletesCustomer() {
 
 		Long id = 1L;
 		
-	    Customer customer = new Company();
+	    Customer customer = company("Test", new Address());
 	    customer.setCustomerId(id);
 
 	    when(customerRepo.findById(id)).thenReturn(Optional.of(customer));
 
-	    customerService.deleteCustomer(id);
+	    assertTrue(customerService.deleteCustomer(id));
 
 	    verify(customerRepo).findById(id);
-	    verify(customerRepo).delete(customer);
+	    assertEquals("DELETED", customer.getStatus());
+	    verify(customerRepo).save(customer);
+	    verify(customerRepo, never()).delete(customer);
 	}
 	
 	@Test
@@ -370,18 +399,22 @@ class Sprint4DeliverableApplicationTests {
 		
 		// Expected customers
 		List<Customer> expected = new ArrayList<>();
-		expected.add(new Person("John Doe", address1, new ArrayList<>()));
-		expected.add(new Company("FDM Group", address2, new ArrayList<>()));
+		expected.add(person("John Doe", address1));
+		expected.add(company("FDM Group", address2));
 	    
 	    expected.get(0).setCustomerId(1L);
 	    expected.get(1).setCustomerId(2L);
 	    
-	    when(customerRepo.findAll()).thenReturn(expected);
+	    when(customerRepo.findByStatus("ACTIVE")).thenReturn(expected);
 
-	    List<Customer> actual = customerService.getAllCustomers();
+	    List<AdminCustomerListItem> actual = customerService.getAllCustomers();
 	    
-	    verify(customerRepo).findAll();
-	    assertEquals(expected, actual);
+	    verify(customerRepo).findByStatus("ACTIVE");
+	    assertEquals(List.of(
+            new AdminCustomerListItem(1, "John Doe", null,
+                "300 Barangaroo Avenue, Sydney, New South Wales, 2000", "person", null, null),
+            new AdminCustomerListItem(2, "FDM Group", null,
+                "697 Collins Street, Melbourne, Victoria, 3000", "company", null, null)), actual);
 	}
 	
 	@Test
@@ -426,7 +459,7 @@ class Sprint4DeliverableApplicationTests {
 	public void saveCustomer_OnlyStreetNumberAndPostcode_returns200() throws Exception {
 		
 		Address newAddress = new Address("Hungerford Crescent", "3216");
-		Customer newCustomer = new Person("John Doe", newAddress, new ArrayList<>());
+		Customer newCustomer = person("John Doe", newAddress);
 		
 		String customerJson = objectMapper.writeValueAsString(newCustomer);
 		
@@ -451,7 +484,7 @@ class Sprint4DeliverableApplicationTests {
 	public void saveSavingsAccount_returns200() throws Exception {
 		
 		Address newAddress = new Address("300 Barangaroo Avenue", "2000", "Sydney", "New South Wales");
-		Customer newCustomer = new Person("John Doe", newAddress, new ArrayList<>());
+		Customer newCustomer = person("John Doe", newAddress);
 		SavingsAccount newAccount = new SavingsAccount(1234.56, newCustomer, 0.05);
 		
 		String accountJson = objectMapper.writeValueAsString(newAccount);
@@ -466,7 +499,7 @@ class Sprint4DeliverableApplicationTests {
 	public void saveCheckingAccount_returns200() throws Exception {
 		
 		Address newAddress = new Address("300 Barangaroo Avenue", "2000", "Sydney", "New South Wales");
-		Customer newCustomer = new Person("John Doe", newAddress, new ArrayList<>());
+		Customer newCustomer = person("John Doe", newAddress);
 		CheckingAccount newAccount = new CheckingAccount(6789.01, newCustomer, 10);
 		
 		String accountJson = objectMapper.writeValueAsString(newAccount);
@@ -480,7 +513,7 @@ class Sprint4DeliverableApplicationTests {
 	@Test
 	public void account_setBalance() {
 		
-		Account account = new SavingsAccount(1234.56, new Person(), 0.05);
+		Account account = new SavingsAccount(1234.56, person("Test", new Address()), 0.05);
 		double newBalance = 6789.02;
 		
 		account.setBalance(newBalance);
@@ -491,10 +524,10 @@ class Sprint4DeliverableApplicationTests {
 	@Test
 	public void account_setCustomer() throws Exception {
 		
-		Account account = new SavingsAccount(1234.56, new Person(), 0.05);
+		Account account = new SavingsAccount(1234.56, person("Test", new Address()), 0.05);
 		
 		Address newAddress = new Address("300 Barangaroo Avenue", "2000", "Sydney", "New South Wales");
-		Customer newCustomer = new Person("John Doe", newAddress, new ArrayList<>());
+		Customer newCustomer = person("John Doe", newAddress);
 		
 		account.setCustomer(newCustomer);
 		
@@ -504,7 +537,7 @@ class Sprint4DeliverableApplicationTests {
 	@Test
 	public void checkingAccount_setNextCheckNumber() {
 		
-		CheckingAccount account = new CheckingAccount(6789.01, new Company(), 10);
+		CheckingAccount account = new CheckingAccount(6789.01, company("Test", new Address()), 10);
 		int nextCheckNumber = 20;
 		
 		account.setNextCheckNumber(nextCheckNumber);
@@ -515,7 +548,7 @@ class Sprint4DeliverableApplicationTests {
 	@Test
 	public void savingsAccount_setInterestRate() {
 		
-		SavingsAccount account = new SavingsAccount(84287.63, new Company(), 0.05);
+		SavingsAccount account = new SavingsAccount(84287.63, company("Test", new Address()), 0.05);
 		double newInterestRate = 0.08;
 		
 		account.setInterestRate(newInterestRate);
@@ -526,11 +559,11 @@ class Sprint4DeliverableApplicationTests {
 	@Test
 	public void customer_setAccounts() {
 		
-		Account account1 = new SavingsAccount(1234.56, new Person(), 0.05);
-		Account account2 = new CheckingAccount(6789.01, new Company(), 10);
+		Account account1 = new SavingsAccount(1234.56, person("Test", new Address()), 0.05);
+		Account account2 = new CheckingAccount(6789.01, company("Test", new Address()), 10);
 		List<Account> accounts = List.of(account1, account2);
 		
-		Customer customer = new Person("John Doe", new Address(), new ArrayList<>());
+		Customer customer = person("John Doe", new Address());
 		
 		customer.setAccounts(accounts);
 		
@@ -543,15 +576,15 @@ class Sprint4DeliverableApplicationTests {
 		String city = "Toronto";
 		
 		Address address = new Address("130 Adelaide St West", "M5H 3P5");
-        Customer customer = new Company("FDM Group", address, new ArrayList<Account>());
+        Customer customer = company("FDM Group", address);
         
         Account account = new SavingsAccount(1234.56, customer, 0.05);
 		List<Account> expectedAccounts = List.of(account);
 		customer.setAccounts(expectedAccounts);
 		
-		Account otherAccount = new SavingsAccount(1234.56, new Person(), 0.05);
+		Account otherAccount = new SavingsAccount(1234.56, person("Test", new Address()), 0.05);
 		Address otherAddress = new Address("300 Barangaroo Avenue", "2000", "Sydney", "New South Wales");
-		Customer otherCustomer = new Person("John Doe", otherAddress, new ArrayList<>());
+		Customer otherCustomer = person("John Doe", otherAddress);
 		otherAccount.setCustomer(otherCustomer);
 		
 		List<Account> fullListOfAccounts = List.of(account, otherAccount);
@@ -567,7 +600,7 @@ class Sprint4DeliverableApplicationTests {
 	public void saveAccount_WithCustomer_savesAddressCustomerAndAccount() throws Exception {
 		
 		Address address = new Address("130 Adelaide St West", "M5H 3P5");
-        Customer customer = new Company("FDM Group", address, new ArrayList<Account>());
+        Customer customer = company("FDM Group", address);
      
         Account account = new SavingsAccount(1234.56, customer, 0.05);
         
@@ -649,79 +682,69 @@ class Sprint4DeliverableApplicationTests {
 	}
 	
 	@Test
-	void addAccount_ExistingAccounts_AddsAccount() throws Exception {
-	   
-		Customer customer = mock(Customer.class);
-     
-        Account account = new SavingsAccount(1234.56, customer, 0.05);
+	void addAccount_ExistingAccounts_AssignsCustomerAndSavesAccount() throws Exception {
+		Customer customer = company("Test", new Address());
+		Account existingAccount = new SavingsAccount(50.0, customer, 0.02);
+		customer.setAccounts(new ArrayList<>(List.of(existingAccount)));
+		Account account = new SavingsAccount(1234.56, null, 0.05);
 
-	    List<Account> accounts = new ArrayList<>();
+		when(customerRepo.findById(1L)).thenReturn(Optional.of(customer));
+		when(accountRepo.findById(2L)).thenReturn(Optional.of(account));
 
-	    when(customerRepo.findById(1L))
-	            .thenReturn(Optional.of(customer));
-	    when(accountRepo.findById(2L))
-	            .thenReturn(Optional.of(account));
-	    when(customer.getAccounts())
-	            .thenReturn(accounts);
+		customerService.addAccount(1L, 2L);
 
-	    customerService.addAccount(1L, 2L);
-
-	    assertTrue(accounts.contains(account));
-	    verify(customer).setAccounts(accounts);
-	    verify(customerRepo).save(customer);
+		assertEquals(customer, account.getCustomer());
+		assertEquals(List.of(existingAccount), customer.getAccounts());
+		verify(accountRepo).save(account);
+		verify(customerRepo, never()).save(customer);
 	}
 	
 	@Test
-	void addAccount_NullAccounts_CreatesNewList_SavesCustomer() throws Exception {
-		
-		Customer customer = mock(Customer.class);
-     
-        Account account = new SavingsAccount(1234.56, customer, 0.05);
+	void addAccount_NullAccounts_AssignsCustomerAndSavesAccount() throws Exception {
+		Customer customer = company("Test", new Address());
+		customer.setAccounts(null);
+		Account account = new SavingsAccount(1234.56, null, 0.05);
 
-	    when(customerRepo.findById(1L))
-	            .thenReturn(Optional.of(customer));
-	    when(accountRepo.findById(2L))
-	            .thenReturn(Optional.of(account));
-	    when(customer.getAccounts())
-	            .thenReturn(null);
+		when(customerRepo.findById(1L)).thenReturn(Optional.of(customer));
+		when(accountRepo.findById(2L)).thenReturn(Optional.of(account));
 
-	    customerService.addAccount(1L, 2L);
-	    
-	    verify(customerRepo).save(customer);
+		customerService.addAccount(1L, 2L);
+
+		assertNotNull(customer.getAccounts());
+		assertEquals(customer, account.getCustomer());
+		verify(accountRepo).save(account);
 	}
 	
 	@Test
-	void addAccount_CustomerAndAccountDoesNotExist_DoesNothing() {
+	void addAccount_MissingCustomerOrAccount_ThrowsWithoutSaving() {
 	    when(customerRepo.findById(1L))
-	            .thenReturn(Optional.empty());
+	            .thenReturn(Optional.empty(), Optional.of(company("Test", new Address())));
 
-	    when(accountRepo.findById(2L))
-	            .thenReturn(Optional.empty());
+	    assertThrows(IllegalArgumentException.class, () -> customerService.addAccount(1L, 2L));
+	    assertThrows(IllegalArgumentException.class, () -> customerService.addAccount(1L, 2L));
 
-	    customerService.addAccount(1L, 2L);
-
+	    verify(accountRepo).findById(2L);
+	    verify(accountRepo, never()).save(any());
 	    verify(customerRepo, never()).save(any());
 	}
 	
 	@Test
-	void addAccount_addsToList() {
-
-	    Customer customer = mock(Customer.class);
-	    Account account1 = mock(Account.class);
-	    Account account2 = mock(Account.class);
+	void addAccount_assignsCustomerToEachAccount() {
+	    Customer customer = company("Test", new Address());
+	    Account account1 = new SavingsAccount(100.0, null, 0.05);
+	    Account account2 = new CheckingAccount(200.0, null, 10);
 
 	    when(customerRepo.findById(3L)).thenReturn(Optional.of(customer));
-
 	    when(accountRepo.findById(1L)).thenReturn(Optional.of(account1));
-
 	    when(accountRepo.findById(2L)).thenReturn(Optional.of(account2));
-
-	    when(customer.getAccounts()).thenReturn(new ArrayList<>());
 
 	    customerService.addAccount(3L, 1L);
 	    customerService.addAccount(3L, 2L);
 
-	    verify(customerRepo, times(2)).save(customer);
+	    assertEquals(customer, account1.getCustomer());
+	    assertEquals(customer, account2.getCustomer());
+	    verify(accountRepo).save(account1);
+	    verify(accountRepo).save(account2);
 	}
 	
 	@Test
@@ -748,10 +771,10 @@ class Sprint4DeliverableApplicationTests {
 	void findByCity_returnsAccountsInCity() throws Exception {
 
 	    Address address1 = new Address("152 Fanshawe Street", "1010", "Auckland", "Auckland");
-	    Customer customer1 = new Company("FDM Group", address1, new ArrayList<Account>());
+	    Customer customer1 = company("FDM Group", address1);
 	    
 	    Address address2 = new Address("697 Collins Street", "3000", "Melbourne", "Victoria");
-	    Customer customer2 = new Company("FDM Group", address2, new ArrayList<Account>());
+	    Customer customer2 = company("FDM Group", address2);
 
 	    Account account1 = new SavingsAccount(1234.56, customer1, 0.05);
 	    Account account2 = new CheckingAccount(6789.01, customer2, 10);
@@ -776,7 +799,8 @@ class Sprint4DeliverableApplicationTests {
 	
 	@Test
 	void setCustomer_returns200() throws Exception {
-		
+		AccountService service = mock(AccountService.class);
+		mvc = accountControllerMvc(service);
 	    mvc.perform(MockMvcRequestBuilders.put("/account/setCustomer")
 	       .param("accountId", "1")
 	       .param("customerId", "2"))
@@ -807,6 +831,9 @@ class Sprint4DeliverableApplicationTests {
 
 	    String accountJson = objectMapper.writeValueAsString(newAccount);
 
+		AccountService service = mock(AccountService.class);
+		when(service.saveAccount(any(Account.class))).thenReturn(newAccount);
+		mvc = accountControllerMvc(service);
 	    mvc.perform(MockMvcRequestBuilders.put("/account/edit")
 	            						  .contentType(MediaType.APPLICATION_JSON)
 	            						  .content(accountJson))
@@ -890,7 +917,7 @@ class Sprint4DeliverableApplicationTests {
 	
 	@Test
     void getAccounts_returnsAccounts_whenCustomerExists() {
-        Customer customer = new Person();
+        Customer customer = person("Test", new Address());
 
         List<Account> accounts = List.of(
                 new SavingsAccount(1000.0, customer, 0.05),
@@ -912,13 +939,13 @@ class Sprint4DeliverableApplicationTests {
     }
 
     @Test
-    void getAccounts_returnsNull_whenCustomerNotFound() {
+    void getAccounts_returnsEmpty_whenCustomerNotFound() {
         when(customerRepo.findById(1L))
                 .thenReturn(Optional.empty());
 
         List<Account> result = customerService.getAccounts(1L);
 
-        assertNull(result);
+        assertTrue(result.isEmpty());
 
         verify(customerRepo).findById(1L);
     }

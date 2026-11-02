@@ -14,7 +14,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -29,8 +28,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import com.fdmgroup.sprint4Deliverable.Model.CustomerAccount;
-import com.fdmgroup.sprint4Deliverable.Repository.CustomerAccountRepository;
+import com.fdmgroup.sprint4Deliverable.Model.Customer;
+import com.fdmgroup.sprint4Deliverable.Repository.CustomerRepository;
 
 import jakarta.servlet.http.HttpServletResponse;
 import tools.jackson.databind.ObjectMapper;
@@ -50,11 +49,12 @@ public class CustomerSecurityConfig {
 	}
 
 	@Bean
-	UserDetailsService customerUserDetailsService(CustomerAccountRepository repository) {
+	UserDetailsService customerUserDetailsService(CustomerRepository repository) {
 		return username -> {
-			CustomerAccount account = repository.findByUsername(username)
+			Customer account = repository.findByUsername(username)
 					.orElseThrow(() -> new UsernameNotFoundException("Customer account not found"));
-			if (!"ACTIVE".equals(account.getStatus())) {
+			if (!"ACTIVE".equals(account.getStatus())
+					|| account.getPasswordHash() == null || account.getPasswordHash().isBlank()) {
 				throw new UsernameNotFoundException("Customer account not found");
 			}
 			return User.withUsername(account.getUsername())
@@ -90,7 +90,7 @@ public class CustomerSecurityConfig {
 		configuration.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
 				.map(String::trim).filter(origin -> !origin.isEmpty()).toList());
 		configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
-		configuration.setAllowedHeaders(List.of("Content-Type", "X-CSRF-TOKEN"));
+		configuration.setAllowedHeaders(List.of("Content-Type", "X-CSRF-TOKEN", "X-Customer-Claim-Reference"));
 		configuration.setAllowCredentials(true);
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/api/customer-auth/**", configuration);
@@ -119,7 +119,9 @@ public class CustomerSecurityConfig {
 				.authorizeHttpRequests(authorize -> authorize
 						.requestMatchers(HttpMethod.GET, "/api/customer-auth/csrf").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/customer-auth/register",
-								"/api/customer-auth/login").permitAll()
+								"/api/customer-auth/login", "/api/customer-auth/claims",
+								"/api/customer-auth/claims/complete").permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/customer-auth/claims/status").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/customer-auth/session").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/customer-auth/logout").hasRole("CUSTOMER")
 						.anyRequest().hasRole("CUSTOMER"))

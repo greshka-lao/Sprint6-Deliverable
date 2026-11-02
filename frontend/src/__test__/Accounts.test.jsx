@@ -2,17 +2,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import axios from 'axios';
-import Accounts from '../pages/account/Accounts';
+import Accounts from '../pages/admin/account/Accounts';
 
 /* ===== MOCKS ===== */
 
 vi.mock('axios');
-
-vi.mock('../../components/AccountPopUp', () => ({
-  default: ({ accountId }) => (
-    <div>Popup {accountId}</div>
-  ),
-}));
 
 /* ===== PROPS ===== */
 
@@ -46,6 +40,27 @@ const accounts = [
   }
 ]
 
+const mockAccountRequests = () => {
+  axios.get.mockImplementation((url) => {
+    if (url.endsWith('/account/getAll')) {
+      return Promise.resolve({ data: accounts });
+    }
+    if (url.endsWith('/account/get?accountId=1')) {
+      return Promise.resolve({ data: accounts[0] });
+    }
+    if (url.endsWith('/account/get?accountId=2')) {
+      return Promise.resolve({ data: accounts[1] });
+    }
+    if (url.endsWith('/customer/get?customerId=1')) {
+      return Promise.resolve({ data: customers[0] });
+    }
+    if (url.endsWith('/customer/get?customerId=2')) {
+      return Promise.resolve({ data: customers[1] });
+    }
+    return Promise.resolve({ data: [] });
+  });
+};
+
 describe('Accounts', () => {
 
   /* ===== BEFORE TEST ===== */
@@ -76,6 +91,11 @@ describe('Accounts', () => {
       </MemoryRouter>
     );
 
+    await waitFor(() => {
+      expect(axios.get).toHaveBeenCalledWith(
+        expect.stringContaining('/customer/get?customerId=1')
+      );
+    });
     expect(await screen.findByText(customers[0].name)).toBeInTheDocument();
 
     expect(screen.getByText(customers[1].name)).toBeInTheDocument();
@@ -108,19 +128,7 @@ describe('Accounts', () => {
   });
 
   it('opens popup when savings account ID clicked', async () => {
-    axios.get
-      .mockResolvedValueOnce({
-        data: accounts,
-      })
-      .mockResolvedValueOnce({
-        data: customers[0],
-      })
-      .mockResolvedValueOnce({
-        data: customers[1],
-      })
-      .mockResolvedValueOnce({
-        data: accounts[0],
-      });
+    mockAccountRequests();
 
     render(
       <MemoryRouter>
@@ -142,19 +150,7 @@ describe('Accounts', () => {
   });
 
   it('opens popup when savings account ID clicked', async () => {
-    axios.get
-      .mockResolvedValueOnce({
-        data: accounts,
-      })
-      .mockResolvedValueOnce({
-        data: customers[0],
-      })
-      .mockResolvedValueOnce({
-        data: customers[1],
-      })
-      .mockResolvedValueOnce({
-        data: accounts[1],
-      });
+    mockAccountRequests();
 
     render(
       <MemoryRouter>
@@ -176,19 +172,7 @@ describe('Accounts', () => {
   });
 
   it('opens popup when account customer name clicked', async () => {
-    axios.get
-      .mockResolvedValueOnce({
-        data: accounts,
-      })
-      .mockResolvedValueOnce({
-        data: customers[0],
-      })
-      .mockResolvedValueOnce({
-        data: customers[1],
-      })
-      .mockResolvedValueOnce({
-        data: accounts[0],
-      });
+    mockAccountRequests();
 
     render(
       <MemoryRouter>
@@ -208,19 +192,7 @@ describe('Accounts', () => {
   });
 
   it('opens popup when account balance clicked', async () => {
-    axios.get
-      .mockResolvedValueOnce({
-        data: accounts,
-      })
-      .mockResolvedValueOnce({
-        data: customers[0],
-      })
-      .mockResolvedValueOnce({
-        data: customers[1],
-      })
-      .mockResolvedValueOnce({
-        data: accounts[0],
-      });
+    mockAccountRequests();
 
     render(
       <MemoryRouter>
@@ -240,19 +212,7 @@ describe('Accounts', () => {
   });
 
   it('opens popup when account type clicked', async () => {
-    axios.get
-      .mockResolvedValueOnce({
-        data: accounts,
-      })
-      .mockResolvedValueOnce({
-        data: customers[0],
-      })
-      .mockResolvedValueOnce({
-        data: customers[1],
-      })
-      .mockResolvedValueOnce({
-        data: accounts[0],
-      });
+    mockAccountRequests();
 
     render(
       <MemoryRouter>
@@ -274,16 +234,7 @@ describe('Accounts', () => {
   it('deletes account when confirmed', async () => {
     window.confirm = vi.fn(() => true);
 
-    axios.get
-      .mockResolvedValueOnce({
-        data: accounts,
-      })
-      .mockResolvedValueOnce({
-        data: customers[0],
-      })
-      .mockResolvedValueOnce({
-        data: customers[1],
-      });
+    mockAccountRequests();
 
     axios.delete.mockResolvedValue({});
 

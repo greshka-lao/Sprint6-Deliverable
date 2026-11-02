@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fdmgroup.sprint4Deliverable.Model.Account;
+import com.fdmgroup.sprint4Deliverable.Model.AdminCustomerListItem;
 import com.fdmgroup.sprint4Deliverable.Model.Customer;
 import com.fdmgroup.sprint4Deliverable.Service.AddressService;
 import com.fdmgroup.sprint4Deliverable.Service.AuthService;
@@ -49,7 +51,20 @@ public class CustomerController {
 	public ResponseEntity<?> saveCustomer(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @RequestBody Customer customer) {
 		authService.validateSession(extractToken(authorizationHeader));
 		try {
+			String customerType = customer.getCustomerType();
+			if (customer.getCustomerId() != 0 || customer.getAddress() == null
+					|| customer.getAddress().getAddressId() != 0) {
+				return ResponseEntity.badRequest().body("Customer and address identifiers are server-managed.");
+			}
+			if (customer.getName() == null || customer.getName().isBlank()) {
+				return ResponseEntity.badRequest().body("Customer name is required.");
+			}
+			if (customerType == null || (!"person".equalsIgnoreCase(customerType.trim())
+					&& !"company".equalsIgnoreCase(customerType.trim()))) {
+				return ResponseEntity.badRequest().body("Customer type must be person or company.");
+			}
 			addressService.saveAddress(customer.getAddress());
+			System.out.println(customer.getAddress());
 			customerService.saveCustomer(customer);
 		} catch (Exception e) {
 			return ResponseEntity.badRequest().body(e.getMessage());
@@ -60,9 +75,10 @@ public class CustomerController {
 	
 	@Operation(summary = "Get a customer by ID")
 	@GetMapping("/get")
-	public Customer getCustomerById(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @Parameter(description = "The ID of the specified customer") @RequestParam long customerId) {
+	public ResponseEntity<Customer> getCustomerById(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @Parameter(description = "The ID of the specified customer") @RequestParam long customerId) {
 		authService.validateSession(extractToken(authorizationHeader));
-		return customerService.findCustomerById(customerId);
+		Customer customer = customerService.findCustomerById(customerId);
+		return customer == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(customer);
 	}
 	
 	@Operation(summary = "Edit customer details: name, street number, postal codel, city, province")
@@ -71,6 +87,8 @@ public class CustomerController {
 		authService.validateSession(extractToken(authorizationHeader));
 		try {
 			customerService.editCustomer(customer);
+		} catch (EntityNotFoundException e) {
+			return ResponseEntity.notFound().build();
 		} catch (Exception e) {
 			return ResponseEntity.badRequest().body(e.getMessage());
 		}
@@ -87,14 +105,15 @@ public class CustomerController {
 	
 	@Operation(summary = "Delete a customer")
 	@DeleteMapping("/delete")
-	public void deleteCustomer(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @Parameter(description = "The ID of the specified customer") @RequestParam long customerId) {
+	public ResponseEntity<Void> deleteCustomer(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @Parameter(description = "The ID of the specified customer") @RequestParam long customerId) {
 		authService.validateSession(extractToken(authorizationHeader));
-		customerService.deleteCustomer(customerId);
+		return customerService.deleteCustomer(customerId)
+				? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
 	}
 	
 	@Operation(summary = "Get all customers")
 	@GetMapping("/getAll")
-	public List<Customer> getAllCustomers(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+	public List<AdminCustomerListItem> getAllCustomers(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
 		authService.validateSession(extractToken(authorizationHeader));
 		return customerService.getAllCustomers();
 	}

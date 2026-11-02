@@ -7,10 +7,11 @@ The backend is hosted under the configured servlet context path `/sprint4Deliver
 - Customer endpoints consult only customer account/session state. Existing `/sprint4Deliverable/api/auth/**` behavior remains the admin contract.
 - Spring Security's higher-priority filter chain applies to customer-auth endpoints and future customer-only APIs; a lower-priority compatibility chain preserves the current behavior outside that scope. Do not rely on Spring Boot's generated default user.
 - Registration and sign-in are anonymous; session validation requires an authenticated `ROLE_CUSTOMER` principal. A customer principal is never accepted as an admin principal.
-- Registration requires name, address, email, phone number, and password. It never accepts a username, role, status, admin flag, session identifier, or operational customer/account ID.
+- Registration requires name, `customerType` (`person` or `company`), address, email, phone number, and password. It never accepts a username, role, status, admin flag, session identifier, or operational customer/account ID.
 - The address has `streetNumber`, `postalCode`, `city`, and `province` fields. Phone numbers include a country code and are validated and stored in E.164 format.
 - The server generates a username by lowercasing the name, removing all whitespace while preserving other characters, and appending a sequence beginning at `001` for each matching base. The suffix is at least three digits and expands beyond `999`; allocation is unique even for concurrent registrations.
-- Normalized email and generated username values are unique within the customer account store.
+- Normalized email and generated username values are unique in the central `customer` table.
+- The central customer row owns the login identity and is the root of the joined `Person`/`Company` subtype. New direct registrations persist the matching subtype; administrator-created unclaimed profiles use the claim workflow below.
 - Passwords are submitted only over HTTPS in deployed environments; the server stores only an algorithm-prefixed adaptive hash created with Spring Security `PasswordEncoder`.
 - Passwords must have at least 8 characters; passwords of at least 64 characters must be supported. No arbitrary character-composition rules apply.
 - Unknown username and wrong password produce the same generic sign-in failure.
@@ -36,13 +37,14 @@ The client sends the token in `X-CSRF-TOKEN` on registration, login, and logout 
 
 ## POST `/register`
 
-Create a customer account. This does not create or link an admin or operational bank-customer record. The server generates a username and returns it so the customer can use it at sign-in.
+Create a central customer account. The server generates a username and returns it so the customer can use it at sign-in. An exact match to an existing administrator-created profile requires a claim rather than creating a duplicate.
 
 **Request: `application/json`**
 
 ```json
 {
   "name": "Greshka Lao",
+  "customerType": "person",
   "address": {
     "streetNumber": "123 Main Street",
     "postalCode": "A1A 1A1",
@@ -83,6 +85,15 @@ Create a customer account. This does not create or link an admin or operational 
 {
   "code": "duplicate_identity",
   "message": "That email address is already in use."
+}
+```
+
+**Existing profile claim required: `409 Conflict`**
+
+```json
+{
+  "code": "profile_claim_required",
+  "message": "An existing profile requires an administrator-approved claim."
 }
 ```
 
@@ -132,6 +143,12 @@ No difference in response is made between an unknown account and a wrong passwor
 ```
 
 Include a `Retry-After` header. Keep the response generic and do not reveal whether the submitted username exists. This rate limit is temporary and does not permanently lock the customer account.
+
+## Profile claims
+
+`POST /claims` accepts name, customer type, complete address, email, and E.164 phone number. It does not accept a password. For one exact, unique, active, unclaimed profile, the server creates a pending claim and returns a single-use `claimReference`; other outcomes return a generic response without disclosing whether a profile exists.
+
+`GET /claims/status` requires the reference in `X-Customer-Claim-Reference` and returns only `PENDING`, `APPROVED`, or `REJECTED`. `POST /claims/complete` requires the same header and a password, and succeeds only for an approved claim. It returns the generated username. The reference is stored as a SHA-256 hash, is never placed in a URL, and cannot be reused after completion.
 
 ## GET `/session`
 

@@ -9,13 +9,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.fdmgroup.sprint4Deliverable.Repository.CustomerAccountRepository;
+import com.fdmgroup.sprint4Deliverable.Repository.CustomerRepository;
 
 @ExtendWith(MockitoExtension.class)
 class CustomerUsernameServiceTests {
 
 	@Mock
-	private CustomerAccountRepository repository;
+	private CustomerRepository repository;
 
 	@InjectMocks
 	private CustomerUsernameService usernameService;

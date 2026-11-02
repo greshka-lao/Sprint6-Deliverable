@@ -37,6 +37,31 @@ export async function registerCustomer(details) {
   })
 }
 
+export async function requestCustomerClaim(details) {
+  return request('/claims', {
+    method: 'POST',
+    headers: await csrfHeaders(),
+    body: JSON.stringify(details)
+  })
+}
+
+export async function getCustomerClaimStatus(reference) {
+  return request('/claims/status', {
+    headers: { 'X-Customer-Claim-Reference': reference }
+  })
+}
+
+export async function completeCustomerClaim(reference, password) {
+  return request('/claims/complete', {
+    method: 'POST',
+    headers: {
+      ...(await csrfHeaders()),
+      'X-Customer-Claim-Reference': reference
+    },
+    body: JSON.stringify({ password })
+  })
+}
+
 export async function loginCustomer(username, password) {
   const result = await request('/login', {
     method: 'POST',

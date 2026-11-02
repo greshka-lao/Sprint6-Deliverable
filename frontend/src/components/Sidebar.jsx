@@ -12,6 +12,7 @@ function AdminSidebar() {
         <>
           <Link to="/admin/dashboard">Dashboard</Link>
           <Link to="/admin/customers">Customers</Link>
+          <Link to="/admin/customer-claims">Customer Claims</Link>
           <Link to="/admin/accounts">Accounts</Link>
         </>
       ) : (

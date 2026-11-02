@@ -1,35 +1,43 @@
 import '../../../App.css'
-import axios from 'axios'
 import { useState, useEffect } from 'react'
 import Sidebar from '../../../components/Sidebar'
 import Header from '../../../components/Header'
-import CustomerAccountsPopUp from '../../../components/CustomerAccountsPopUp'
 import { Link } from 'react-router-dom'
+import { deleteCustomer as removeCustomer, getCustomers } from '../../../services/customerService'
 
 function Customers() {
-  const apiUrl = 'http://localhost:8080/sprint4Deliverable'
   const [customers, setCustomers] = useState([]);
-
-  const [selectedCustomer, selectCustomer] = useState(null);
 
   const [searchInput, setSearchInput] = useState("");
   const [searchId, setSearchId] = useState("");
 
   useEffect(() => {
-    loadCustomers()
+    let active = true
+    getCustomers()
+      .then((items) => {
+        if (active) setCustomers(items)
+      })
+      .catch((error) => {
+        console.error('Unable to load customers:', error)
+      })
+
+    return () => {
+      active = false
+    }
   }, [])
 
   const loadCustomers = async () => {
-    axios.get(apiUrl + '/customer/getAll')
-      .then((response) => {setCustomers(response.data)})
-      .catch((error) => {console.log(error)})
+    setCustomers(await getCustomers())
   }
 
-  const deleteCustomer = (id) => {
-    if (confirm("Deleting this customer will also delete all associated accounts. Are you sure you want to continue?")) {
-      axios.delete(apiUrl + '/customer/delete?customerId=' + id)
-        .then(() => loadCustomers())
-        .catch((error) => console.log(error))
+  const deleteCustomer = async (id) => {
+    if (confirm("Remove this customer's login access? The record will be marked deleted, and assigned bank accounts will be unassigned.")) {
+      try {
+        await removeCustomer(id)
+        await loadCustomers()
+      } catch (error) {
+        console.error('Unable to delete customer:', error)
+      }
     }
   };
 
@@ -46,8 +54,6 @@ function Customers() {
 
   return (
     <div style={{ position: "relative" }}>
-      {selectedCustomer && <CustomerAccountsPopUp customer={selectedCustomer} selectCustomer={selectCustomer}/>}
-
       <Header/>
 
       <div id="layout">
@@ -84,8 +90,11 @@ function Customers() {
               <tr>
                 <th>ID</th>
                 <th>Name</th>
+                <th>Username</th>
                 <th>Address</th>
-                <th>Accounts</th>
+                <th>Customer Type</th>
+                <th>Phone</th>
+                <th>Email</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -97,17 +106,13 @@ function Customers() {
                 <tr key={customer.customerId}>
                   <td>{customer.customerId}</td>
                   <td>{customer.name}</td>
-                  <td>{customer.address.streetNumber}, {customer.address.city}, {customer.address.province} {customer.address.postalCode}</td>
                   <td>
-                    <button onClick={() => {
-                      customer.accountIds.length == 0 ?
-                        alert("This customer has no accounts.")
-                      : selectCustomer(customer)
-                    }}
-                    >
-                      Accounts
-                    </button>
+                    {customer.username || ''}
                   </td>
+                  <td>{customer.address || ''}</td>
+                  <td>{customer.customerType || ''}</td>
+                  <td>{customer.phoneNumber || ''}</td>
+                  <td>{customer.email || ''}</td>
                   <td>
                     <div className="actions">
                       <Link to={`/admin/customers/edit/${customer.customerId}`}>

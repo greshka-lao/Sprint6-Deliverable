@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import axios from 'axios';
-import AddCustomer from '../pages/customer/AddCustomer';
+import AddCustomer from '../pages/admin/customer/AddCustomer';
 
 /* ===== MOCKS ===== */
 
@@ -66,6 +66,8 @@ describe('AddCustomer', () => {
     expect(screen.getByLabelText(/City/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Province/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Postal Code/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Customer Type/i)).toBeRequired();
+    expect(screen.getByLabelText(/Customer Type/i)).toHaveValue('');
   });
 
   it('creates a person customer', async () => {
@@ -76,6 +78,10 @@ describe('AddCustomer', () => {
         <AddCustomer />
       </MemoryRouter>
     );
+
+    fireEvent.change(screen.getByLabelText(/Customer Type/i), {
+      target: { value: 'person' },
+    });
 
     fireEvent.change(screen.getByLabelText(/Name/i), {
       target: { value: customers[0].name }
@@ -102,7 +108,12 @@ describe('AddCustomer', () => {
     await waitFor(() => {
       expect(axios.post).toHaveBeenCalledWith(
         expect.stringContaining('/customer/save'),
-        customers[0]
+        {
+          customerType: customers[0].customerType,
+          name: customers[0].name,
+          address: customers[0].address
+        },
+        expect.any(Object)
       );
     });
 
@@ -147,7 +158,8 @@ describe('AddCustomer', () => {
     await waitFor(() => {
       expect(axios.post).toHaveBeenCalledWith(
         expect.stringContaining('/customer/save'),
-        customers[1]
+        customers[1],
+        expect.any(Object)
       );
     });
   });
@@ -196,7 +208,8 @@ describe('AddCustomer', () => {
             province: "",
             postalCode: "hello"
           }
-        }
+        },
+        expect.any(Object)
       );
     });
 
@@ -216,6 +229,10 @@ describe('AddCustomer', () => {
         <AddCustomer />
       </MemoryRouter>
     );
+
+    fireEvent.change(screen.getByLabelText(/Customer Type/i), {
+      target: { value: 'person' },
+    });
 
     fireEvent.change(screen.getByLabelText(/Name/i), {
       target: { value: customers[0].name },
@@ -251,7 +268,8 @@ describe('AddCustomer', () => {
             province: "Wellington",
             postalCode: customers[0].address.postalCode
           }
-        }
+        },
+        expect.any(Object)
       );
     });
 

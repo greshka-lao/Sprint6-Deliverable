@@ -14,6 +14,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -64,6 +65,7 @@ class CustomerAuthSecurityTests {
 	}
 
 	@Test
+	@Transactional
 	void registeredCustomerCanSignInValidateSessionAndLogout() throws Exception {
 		MvcResult csrfResult = mockMvc.perform(get("/api/customer-auth/csrf"))
 				.andExpect(status().isOk())
@@ -83,7 +85,8 @@ class CustomerAuthSecurityTests {
 				  },
 				  "email": "%s",
 				  "phoneNumber": "+15551234567",
-				  "password": "customer-password"
+				  "password": "customer-password",
+				  "customerType": "person"
 				}
 				""".formatted(name, email);
 

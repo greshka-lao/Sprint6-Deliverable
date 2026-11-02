@@ -6,8 +6,17 @@ import Header from "../../../components/Header";
 import AccountPopUp from "../../../components/AccountPopUp"
 import { Link } from "react-router-dom";
 
+const apiUrl = 'http://localhost:8080/sprint4Deliverable'
+
+const fetchAccounts = (selectedCity) => {
+  const url = selectedCity === ""
+    ? `${apiUrl}/account/getAll`
+    : `${apiUrl}/account/getByCity?city=${selectedCity}`
+
+  return axios.get(url)
+}
+
 function Accounts() {
-  const apiUrl = 'http://localhost:8080/sprint4Deliverable'
   const [accounts, setAccounts] = useState([])
   const [customerNames, setCustomerNames] = useState([])
 
@@ -15,7 +24,18 @@ function Accounts() {
   const [selectedCity, selectCity] = useState("")
 
   useEffect(() => {
-    loadAccounts();
+    let active = true
+    fetchAccounts(selectedCity)
+      .then((response) => {
+        if (active) setAccounts(response.data)
+      })
+      .catch((error) => {
+        console.error('Unable to load accounts:', error)
+      })
+
+    return () => {
+      active = false
+    }
   }, [selectedCity])
 
   useEffect(() => {
@@ -43,14 +63,10 @@ function Accounts() {
   }, [accounts])
 
   const loadAccounts = async () => {
-    if (selectedCity == "") {
-      axios.get(apiUrl + '/account/getAll')
-         .then((response) => {setAccounts(response.data)})
-         .catch((error) => {console.log(error)})
-    } else {
-      axios.get(apiUrl + '/account/getByCity?city=' + selectedCity)
-         .then((response) => {setAccounts(response.data)})
-         .catch((error) => {console.log(error)})
+    try {
+      setAccounts((await fetchAccounts(selectedCity)).data)
+    } catch (error) {
+      console.error('Unable to load accounts:', error)
     }
   }
 

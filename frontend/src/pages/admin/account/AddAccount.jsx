@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Sidebar from '../../../components/Sidebar'
 import Header from '../../../components/Header'
+import { getCustomers } from '../../../services/customerService'
 
 function AddAccount() {
   const apiUrl = 'http://localhost:8080/sprint4Deliverable'
@@ -17,9 +18,8 @@ function AddAccount() {
 
   useEffect(() => {
     const loadCustomers = async () => {
-      axios.get(apiUrl + '/customer/getAll')
-        .then((response) => {
-          const customersData = response.data
+      getCustomers()
+        .then((customersData) => {
           if (customersData.length == 0) {
             alert("There are no customers.")
             navigate("/admin/accounts")
@@ -30,7 +30,7 @@ function AddAccount() {
     }
     
     loadCustomers()
-  }, [])
+  }, [navigate])
 
   const sendAccountData = async (accountData) => {
     try {

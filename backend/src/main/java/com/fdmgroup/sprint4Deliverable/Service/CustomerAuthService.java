@@ -7,8 +7,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,12 +18,16 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.fdmgroup.sprint4Deliverable.Exception.IncorrectCityOrProvinceException;
 import com.fdmgroup.sprint4Deliverable.Model.Address;
-import com.fdmgroup.sprint4Deliverable.Model.CustomerAccount;
+import com.fdmgroup.sprint4Deliverable.Model.Company;
+import com.fdmgroup.sprint4Deliverable.Model.Customer;
 import com.fdmgroup.sprint4Deliverable.Model.CustomerAuthResponse;
 import com.fdmgroup.sprint4Deliverable.Model.CustomerRegistrationRequest;
 import com.fdmgroup.sprint4Deliverable.Model.CustomerRegistrationResponse;
-import com.fdmgroup.sprint4Deliverable.Repository.CustomerAccountRepository;
+import com.fdmgroup.sprint4Deliverable.Model.Person;
+import com.fdmgroup.sprint4Deliverable.Repository.AddressRepository;
+import com.fdmgroup.sprint4Deliverable.Repository.CustomerRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -37,19 +41,22 @@ public class CustomerAuthService {
 	private static final Duration RATE_LIMIT_DURATION = Duration.ofMinutes(15);
 	private static final int USERNAME_RETRY_LIMIT = 5;
 
-	private final CustomerAccountRepository repository;
+	private final CustomerRepository customerRepository;
+	private final AddressRepository addressRepository;
 	private final CustomerUsernameService usernameService;
 	private final PasswordEncoder passwordEncoder;
 	private final AuthenticationManager authenticationManager;
 	private final Map<String, FailureWindow> failedLogins = new ConcurrentHashMap<>();
 
-	public CustomerAuthService(CustomerAccountRepository repository,
+	public CustomerAuthService(CustomerRepository customerRepository,
+			AddressRepository addressRepository,
 			CustomerUsernameService usernameService,
 			@Qualifier("customerPasswordEncoder")
 			PasswordEncoder customerPasswordEncoder,
 			@Qualifier("customerAuthenticationManager")
 			AuthenticationManager authenticationManager) {
-		this.repository = repository;
+		this.customerRepository = customerRepository;
+		this.addressRepository = addressRepository;
 		this.usernameService = usernameService;
 		this.passwordEncoder = customerPasswordEncoder;
 		this.authenticationManager = authenticationManager;
@@ -59,21 +66,42 @@ public class CustomerAuthService {
 		ValidatedRegistration registration = validateRegistration(request);
 		String base = usernameService.baseFor(registration.name());
 		int sequence = usernameService.nextAvailableSequence(base);
+		boolean existingProfile = customerRepository.findByNameAndCustomerType(
+						registration.name(), registration.customerType()).stream()
+				.anyMatch(customer -> registration.name().equals(customer.getName())
+						&& registration.customerType().equals(customer.getCustomerType())
+						&& exactAddress(customer.getAddress(), registration.address()));
+		if (existingProfile) {
+			throw new ProfileClaimRequiredException();
+		}
 
 		for (int attempt = 0; attempt < USERNAME_RETRY_LIMIT; attempt++, sequence++) {
 			String username = usernameService.candidate(base, sequence);
-			CustomerAccount account = new CustomerAccount(
-					registration.name(), username, registration.address(), registration.email(),
-					registration.phoneNumber(), passwordEncoder.encode(registration.password()));
+			
+			Address address = registration.address();
+			
 			try {
-				CustomerAccount saved = repository.saveAndFlush(account);
-				return new CustomerRegistrationResponse(saved.getId(), saved.getName(), saved.getUsername(),
-						saved.getEmail(), saved.getPhoneNumber(), "Registration successful. Please sign in.");
+				address = addressRepository.saveAndFlush(address);
+			} catch (IncorrectCityOrProvinceException e) {
+				throw e;
+			}
+			
+			Customer customer = "person".equals(registration.customerType())
+					? new Person(registration.name(), address, null)
+					: new Company(registration.name(), address, null);
+			customer.setUsername(username);
+			customer.setEmail(registration.email());
+			customer.setPhoneNumber(registration.phoneNumber());
+			customer.setPasswordHash(passwordEncoder.encode(registration.password()));
+			try {
+				Customer savedCustomer = customerRepository.saveAndFlush(customer);
+				return new CustomerRegistrationResponse(savedCustomer.getCustomerId(), savedCustomer.getName(), savedCustomer.getUsername(),
+						savedCustomer.getEmail(), savedCustomer.getPhoneNumber(), "Registration successful. Please sign in.");
 			} catch (DataIntegrityViolationException exception) {
-				if (repository.existsByEmail(registration.email())) {
+				if (customerRepository.existsByEmail(registration.email())) {
 					throw new DuplicateCustomerEmailException();
 				}
-				if (repository.existsByUsername(username)) {
+				if (customerRepository.existsByUsername(username)) {
 					continue;
 				}
 				throw exception;
@@ -104,18 +132,19 @@ public class CustomerAuthService {
 
 		failedLogins.remove(rateKey);
 		SecurityContextHolder.getContext().setAuthentication(authentication);
-		CustomerAccount account = repository.findByUsername(authentication.getName())
+		Customer account = customerRepository.findByUsername(authentication.getName())
 				.orElseThrow(() -> new BadCredentialsException("Invalid username or password."));
 		account.recordSuccessfulLogin();
-		repository.save(account);
-		return new CustomerAuthResponse(account.getId(), account.getUsername(), account.getRole());
+		customerRepository.save(account);
+		return new CustomerAuthResponse(account.getCustomerId(), account.getUsername(), account.getRole());
 	}
 
 	public CustomerAuthResponse customerForUsername(String username) {
-		CustomerAccount account = repository.findByUsername(username)
-				.filter(customer -> "ACTIVE".equals(customer.getStatus()))
+		Customer account = customerRepository.findByUsername(username)
+				.filter(customer -> "ACTIVE".equals(customer.getStatus())
+						&& customer.getPasswordHash() != null && !customer.getPasswordHash().isBlank())
 				.orElseThrow(() -> new BadCredentialsException("Customer account not found"));
-		return new CustomerAuthResponse(account.getId(), account.getUsername(), account.getRole());
+		return new CustomerAuthResponse(account.getCustomerId(), account.getUsername(), account.getRole());
 	}
 
 	private void recordFailedLogin(String key) {
@@ -136,14 +165,24 @@ public class CustomerAuthService {
 		return remoteAddress + ":" + username;
 	}
 
+	private boolean exactAddress(Address candidate, Address requested) {
+		return candidate != null
+				&& java.util.Objects.equals(candidate.getStreetNumber(), requested.getStreetNumber())
+				&& java.util.Objects.equals(candidate.getPostalCode(), requested.getPostalCode())
+				&& java.util.Objects.equals(candidate.getCity(), requested.getCity())
+				&& java.util.Objects.equals(candidate.getProvince(), requested.getProvince());
+	}
+
 	private ValidatedRegistration validateRegistration(CustomerRegistrationRequest request) {
 		if (request == null || request.name() == null || request.address() == null
-				|| request.email() == null || request.phoneNumber() == null || request.password() == null) {
+				|| request.email() == null || request.phoneNumber() == null || request.password() == null
+				|| request.customerType() == null) {
 			throw new RegistrationValidationException();
 		}
 		String name = request.name().trim();
 		String email = request.email().trim().toLowerCase(Locale.ROOT);
 		String phone = request.phoneNumber().trim();
+		String customerType = request.customerType().trim().toLowerCase(Locale.ROOT);
 		CustomerRegistrationRequest.AddressRequest suppliedAddress = request.address();
 		String street = suppliedAddress.streetNumber() == null ? "" : suppliedAddress.streetNumber().trim();
 		String postalCode = suppliedAddress.postalCode() == null ? "" : suppliedAddress.postalCode().trim();
@@ -155,6 +194,7 @@ public class CustomerAuthService {
 				|| province.isEmpty() || province.length() > 120
 				|| email.length() > 320 || !EMAIL.matcher(email).matches()
 				|| !E164.matcher(phone).matches()
+				|| (!"person".equals(customerType) && !"company".equals(customerType))
 				|| request.password().length() < 8 || request.password().length() > 1024) {
 			throw new RegistrationValidationException();
 		}
@@ -164,11 +204,11 @@ public class CustomerAuthService {
 		address.setPostalCode(postalCode);
 		address.setCity(city);
 		address.setProvince(province);
-		return new ValidatedRegistration(name, address, email, phone, request.password());
+		return new ValidatedRegistration(name, address, email, phone, request.password(), customerType);
 	}
 
 	private record ValidatedRegistration(String name, Address address, String email,
-			String phoneNumber, String password) {
+			String phoneNumber, String password, String customerType) {
 	}
 
 	private record FailureWindow(Instant startedAt, int failures, Instant blockedUntil) {
@@ -179,6 +219,10 @@ public class CustomerAuthService {
 	}
 
 	public static class DuplicateCustomerEmailException extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+	}
+
+	public static class ProfileClaimRequiredException extends RuntimeException {
 		private static final long serialVersionUID = 1L;
 	}
 

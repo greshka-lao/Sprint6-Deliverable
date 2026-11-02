@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Sidebar from '../../../components/Sidebar'
 import Header from '../../../components/Header'
+import { getCustomers } from '../../../services/customerService'
 
 function UpdateAccount() {
   const { accountId } = useParams();
@@ -16,8 +17,8 @@ function UpdateAccount() {
 
   useEffect(() => {
     const loadCustomers = async () => {
-      axios.get(apiUrl + '/customer/getAll')
-            .then((response) => {setCustomers(response.data)})
+      getCustomers()
+            .then((customersData) => {setCustomers(customersData)})
             .catch((error) => {console.log(error)})
     }
 
@@ -31,7 +32,7 @@ function UpdateAccount() {
     
     loadCustomers()
     loadAccount()
-  }, []);
+  }, [accountId]);
 
   const sendAccountData = async (accountData) => {
     try {

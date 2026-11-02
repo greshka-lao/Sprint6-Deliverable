@@ -4,6 +4,7 @@ import Accounts from './pages/admin/account/Accounts'
 import AddCustomer from './pages/admin/customer/AddCustomer'
 import AddAccount from './pages/admin/account/AddAccount'
 import UpdateCustomer from './pages/admin/customer/UpdateCustomer'
+import CustomerClaims from './pages/admin/customer/CustomerClaims'
 import UpdateAccount from './pages/admin/account/UpdateAccount'
 import AdminLogin from './pages/auth/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -37,7 +38,9 @@ function App() {
           <Route path="/" element={<PublicHome />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+          <Route path="/admin/customer" element={<AdminProtectedRoute><Customers /></AdminProtectedRoute>} />
           <Route path="/admin/customers" element={<AdminProtectedRoute><Customers /></AdminProtectedRoute>} />
+          <Route path="/admin/customer-claims" element={<AdminProtectedRoute><CustomerClaims /></AdminProtectedRoute>} />
           <Route path="/admin/customers/add" element={<AdminProtectedRoute><AddCustomer /></AdminProtectedRoute>} />
           <Route path="/admin/customers/edit/:customerId" element={<AdminProtectedRoute><UpdateCustomer /></AdminProtectedRoute>} />
           <Route path="/admin/accounts" element={<AdminProtectedRoute><Accounts /></AdminProtectedRoute>} />

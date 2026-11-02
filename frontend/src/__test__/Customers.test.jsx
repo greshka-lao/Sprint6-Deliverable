@@ -1,262 +1,84 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor, getByPlaceholderText } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import { vi } from 'vitest';
-import axios from 'axios';
-import Customers from '../pages/customer/Customers';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import axios from 'axios'
+import Customers from '../pages/admin/customer/Customers'
 
-/* ===== MOCKS ===== */
-
-vi.mock('axios');
-
-vi.mock('../components/CustomerAccountsPopUp', () => ({
-  default: ({ customer }) => (
-    <div>Popup {customer.customerId}</div>
-  ),
-}));
-
-/* ===== PROPS ===== */
+vi.mock('axios')
 
 const customers = [
   {
     customerId: 1,
     name: 'Greshka Lao',
-    address: {
-      streetNumber: "67 Queen Street",
-      city: "Auckland",
-      province: "Auckland",
-      postalCode: "1010",
-    },
+    username: 'greshkalao001',
+    address: '67 Queen Street, Auckland, Auckland, 1010',
     customerType: 'person',
-    accountIds: [1]
+    phoneNumber: '+15551234567',
+    email: 'greshka@example.com'
   },
-  {           
+  {
     customerId: 2,
     name: 'FDM Group',
-    address: {
-      streetNumber: "697 Collins Street",
-      city: "Melbourne",
-      province: "Victoria",
-      postalCode: "3000",
-    },
+    username: '',
+    address: '',
     customerType: 'company',
-    accountIds: []
-  }
-]
-
-const accounts = [
-  {
-    accountId: 1,
-    customerId: 1,
-    accountType: 'savingsAccount',
-    balance: 1500,
-    interestRate: 0.05,
+    phoneNumber: '',
+    email: ''
   }
 ]
 
 describe('Customers', () => {
-
-  /* ===== BEFORE TEST ===== */
-
   beforeEach(() => {
-    vi.resetAllMocks();
-  });
+    vi.resetAllMocks()
+    axios.get.mockResolvedValue({ data: customers })
+  })
 
-  /* ===== TESTS =====*/
+  it('renders the seven customer fields in the required order and handles missing values', async () => {
+    render(<MemoryRouter><Customers /></MemoryRouter>)
 
-  it('loads customers', async () => {
-    axios.get.mockResolvedValue({
-      data: customers,
-    });
+    expect(await screen.findByText('greshkalao001')).toBeInTheDocument()
+    const headings = within(screen.getByRole('table')).getAllByRole('columnheader')
+      .map((heading) => heading.textContent)
+    expect(headings.slice(0, 7)).toEqual([
+      'ID', 'Name', 'Username', 'Address', 'Customer Type', 'Phone', 'Email'
+    ])
+    expect(screen.getByText('67 Queen Street, Auckland, Auckland, 1010')).toBeInTheDocument()
+    expect(screen.getByText('FDM Group')).toBeInTheDocument()
+    expect(screen.getAllByRole('row')).toHaveLength(3)
+  })
 
-    render(
-      <MemoryRouter>
-        <Customers />
-      </MemoryRouter>
-    );
+  it('filters by customer id', async () => {
+    render(<MemoryRouter><Customers /></MemoryRouter>)
+    await screen.findByText('Greshka Lao')
+    fireEvent.change(screen.getByPlaceholderText('Search by ID'), { target: { value: '1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }))
+    expect(screen.getByText('Greshka Lao')).toBeInTheDocument()
+    expect(screen.queryByText('FDM Group')).not.toBeInTheDocument()
+  })
 
-    expect(
-      await screen.findByText(customers[0].name)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(customers[0].customerId)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(customers[0].address.streetNumber + ", " + customers[0].address.city + ", " + customers[0].address.province + " " + customers[0].address.postalCode)
-    ).toBeInTheDocument();
+  it('rejects invalid ID search and can clear the search input', async () => {
+    window.alert = vi.fn()
+    render(<MemoryRouter><Customers /></MemoryRouter>)
+    await screen.findByText('Greshka Lao')
+    fireEvent.change(screen.getByPlaceholderText('Search by ID'), { target: { value: 'abc' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }))
+    expect(window.alert).toHaveBeenCalledWith('Please enter a valid ID number.')
+    fireEvent.click(screen.getByRole('button', { name: 'x' }))
+    expect(screen.getByPlaceholderText('Search by ID')).toHaveValue('')
+  })
 
-    expect(
-      screen.getByText(customers[1].name)
-    ).toBeInTheDocument();
-  });
-
-  it('filters by id', async () => {
-    axios.get.mockResolvedValue({
-      data: customers,
-    });
-
-    render(
-      <MemoryRouter>
-        <Customers />
-      </MemoryRouter>
-    );
-
-    await screen.findByText(customers[0].name);
-
-    fireEvent.change(
-      screen.getByPlaceholderText('Search by ID'),
-      { target: { value: customers[0].customerId } }
-    );
-
-    fireEvent.click(screen.getByText('Search'));
-
-    expect(screen.getByText(customers[0].name))
-      .toBeInTheDocument();
-
-    expect(screen.queryByText(customers[1].name))
-      .not.toBeInTheDocument();
-  });
-
-  it('shows validation alert for invalid id', async () => {
-    window.alert = vi.fn();
-
-    axios.get.mockResolvedValue({
-      data: customers,
-    });
-
-    render(
-      <MemoryRouter>
-        <Customers />
-      </MemoryRouter>
-    );
-
-    fireEvent.change(
-      screen.getByPlaceholderText('Search by ID'),
-      { target: { value: 'abc' } }
-    );
-
-    fireEvent.click(screen.getByText('Search'));
-
-    expect(window.alert)
-      .toHaveBeenCalledWith(
-        'Please enter a valid ID number.'
-      );
-  });
-
-  it('clear search input when x button clicked', async () => {
-    window.alert = vi.fn();
-
-    axios.get.mockResolvedValue({
-      data: customers,
-    });
-
-    render(
-      <MemoryRouter>
-        <Customers />
-      </MemoryRouter>
-    );
-
-    fireEvent.change(
-      screen.getByPlaceholderText('Search by ID'),
-      { target: { value: 'abc' } }
-    );
-
-    fireEvent.click(screen.getByText('x'));
-
-    expect(screen.getByPlaceholderText('Search by ID')).toHaveValue('');
-  });
-
-  it('opens accounts popup', async () => {
-    axios.get
-      .mockResolvedValueOnce({
-        data: [customers[0]],
-      })
-      .mockResolvedValueOnce({
-        data: accounts,
-      });
-
-    render(
-      <MemoryRouter>
-        <Customers />
-      </MemoryRouter>
-    );
-
-    const buttons = await screen.findAllByRole("button", { name: 'Accounts' });
-
-    fireEvent.click(buttons[0]);
-
-    expect(await screen.findByText("Popup " + customers[0].customerId))
-  });
-
-  it('alerts when customer has no accounts', async () => {
-    window.alert = vi.fn();
-
-    axios.get
-      .mockResolvedValue({
-        data: [customers[1]],
-      })
-
-    render(
-      <MemoryRouter>
-        <Customers />
-      </MemoryRouter>
-    );
-
-    const buttons = await screen.findAllByRole("button", { name: 'Accounts' });
-
-    fireEvent.click(buttons[0]);
-
-    expect(window.alert).toHaveBeenCalledWith('This customer has no accounts.');
-  });
-
-  it('deletes customer when confirmed', async () => {
-    window.confirm = vi.fn(() => true);
-
-    axios.get.mockResolvedValue({
-      data: customers,
-    });
-
-    axios.delete.mockResolvedValue({});
-
-    render(
-      <MemoryRouter>
-        <Customers />
-      </MemoryRouter>
-    );
-
-    const deleteButtons =
-      await screen.findAllByText('Delete');
-
-    fireEvent.click(deleteButtons[0]);
-
+  it('deletes a customer and reloads the list when confirmed', async () => {
+    window.confirm = vi.fn(() => true)
+    axios.delete.mockResolvedValue({})
+    render(<MemoryRouter><Customers /></MemoryRouter>)
+    const deleteButtons = await screen.findAllByRole('button', { name: 'Delete' })
+    fireEvent.click(deleteButtons[0])
     await waitFor(() => {
       expect(axios.delete).toHaveBeenCalledWith(
-        expect.stringContaining(
-          '/customer/delete?customerId=1'
-        )
-      );
-    });
-  });
-
-  it('does not delete when confirmation cancelled', async () => {
-    window.confirm = vi.fn(() => false);
-
-    axios.get.mockResolvedValue({
-      data: customers,
-    });
-
-    render(
-      <MemoryRouter>
-        <Customers />
-      </MemoryRouter>
-    );
-
-    const deleteButtons =
-      await screen.findAllByText('Delete');
-
-    fireEvent.click(deleteButtons[0]);
-
-    expect(axios.delete)
-      .not.toHaveBeenCalled();
-  });
-});
+        expect.stringContaining('/customer/delete?customerId=1'),
+        expect.any(Object)
+      )
+    })
+    expect(axios.get).toHaveBeenCalledTimes(2)
+  })
+})

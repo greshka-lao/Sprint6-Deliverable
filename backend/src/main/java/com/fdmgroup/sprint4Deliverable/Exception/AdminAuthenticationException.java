@@ -4,7 +4,11 @@ import org.springframework.http.HttpStatus;
 
 public class AdminAuthenticationException extends RuntimeException {
 
-    private final HttpStatus status;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private final HttpStatus status;
     private final String errorCode;
 
     public AdminAuthenticationException(HttpStatus status, String errorCode, String message) {
